@@ -46,6 +46,28 @@ function routeLabel(context) {
   return "";
 }
 
+function deskPathParts() {
+  const match = window.location.pathname.match(/\/desk\/?([^?#]*)/);
+  if (!match) return [];
+  return match[1]
+    .split("/")
+    .filter(Boolean)
+    .map((part) => decodeURIComponent(part));
+}
+
+function labelFromDeskPath(type) {
+  const parts = deskPathParts();
+  if (!parts.length) return type === "Workspace" ? "Home" : "";
+  if (parts[0] === "dashboard-view") return titleCaseSlug(parts[1] || "Dashboard");
+  if (parts[0] === "query-report") return titleCaseSlug(parts[1] || "Report");
+  return titleCaseSlug(parts[0]);
+}
+
+function recordFromDeskPath(type) {
+  const parts = deskPathParts();
+  return type === "Form" && parts.length > 1 ? titleCaseSlug(parts[1]) : "";
+}
+
 const contextDetail = computed(() => {
   const context = props.routeContext;
   const type = context?.page_type || props.pageType || "Page";
@@ -57,8 +79,12 @@ const contextDetail = computed(() => {
     context.dashboard_name ||
     context.workspace_name ||
     context.page_name ||
-    routeLabel(context);
-  const record = context.document_name || (context.page_type === "Form" ? context.route?.[2] : "");
+    routeLabel(context) ||
+    labelFromDeskPath(type);
+  const record =
+    context.document_name ||
+    (context.page_type === "Form" ? context.route?.[2] : "") ||
+    recordFromDeskPath(type);
   return [type, label, record].filter(Boolean).join(" / ");
 });
 
