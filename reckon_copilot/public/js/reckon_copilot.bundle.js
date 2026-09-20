@@ -1,4 +1,3 @@
-import "frappe-ui/style.css";
 import "../css/copilot.css";
 import { mountCopilot } from "./copilot/main";
 
