@@ -10,6 +10,11 @@ class FoundationTests(unittest.TestCase):
 
         self.assertEqual(app.__version__, "0.0.1")
 
+    def test_frappe_module_package_imports(self):
+        module = importlib.import_module("reckon_copilot.reckon_copilot")
+
+        self.assertIsNotNone(module)
+
     def test_hooks_are_frappe_app_compatible(self):
         hooks = importlib.import_module("reckon_copilot.hooks")
 
@@ -63,4 +68,3 @@ class FakeProviderContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

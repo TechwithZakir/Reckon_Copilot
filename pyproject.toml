@@ -18,5 +18,10 @@ dependencies = []
 Homepage = "https://www.reckon.tech"
 
 [tool.setuptools]
-packages = ["reckon_copilot", "reckon_copilot.api", "reckon_copilot.providers"]
+packages = [
+  "reckon_copilot",
+  "reckon_copilot.api",
+  "reckon_copilot.providers",
+  "reckon_copilot.reckon_copilot",
+]
 include-package-data = true
