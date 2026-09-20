@@ -9,7 +9,7 @@ function update(field, value) {
 </script>
 
 <template>
-  <section class="rc-section" aria-labelledby="rc-settings-title">
+  <section class="rc-settings-popover" aria-labelledby="rc-settings-title">
     <h3 id="rc-settings-title">Settings</h3>
     <label class="rc-switch-row">
       <span>Copilot enabled</span>
