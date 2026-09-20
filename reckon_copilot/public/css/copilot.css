@@ -118,7 +118,7 @@
 
 .rc-header-actions {
   flex: none;
-  gap: 4px;
+  gap: 6px;
 }
 
 .rc-icon-button,
@@ -136,16 +136,20 @@
 
 .rc-icon-button {
   display: inline-flex;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
   background: transparent;
   color: #183b66;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
+}
+
+.rc-icon-button svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 
 .rc-icon-button:hover,
