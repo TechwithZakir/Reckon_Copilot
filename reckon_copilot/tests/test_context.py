@@ -50,6 +50,16 @@ class ContextNormalizationTests(unittest.TestCase):
         self.assertEqual(context["page_type"], "Dashboard")
         self.assertEqual(context["dashboard_name"], "Buying")
 
+    def test_dashboard_context_accepts_frappe_json_string_args(self):
+        context = build_context(
+            route='["Dashboard","Selling"]',
+            filters="{}",
+            page_type="Dashboard",
+        )
+
+        self.assertEqual(context["page_type"], "Dashboard")
+        self.assertEqual(context["dashboard_name"], "Selling")
+
     def test_workspace_context_adapter(self):
         context = build_context(route=["Workspace", "Buying"])
 

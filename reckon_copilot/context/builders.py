@@ -30,6 +30,11 @@ def sanitize_scalar(value: Any) -> str | int | float | bool | None:
 
 
 def sanitize_route(route: Any) -> tuple[str, ...]:
+    if isinstance(route, str):
+        try:
+            route = json.loads(route)
+        except json.JSONDecodeError:
+            route = [route]
     if not isinstance(route, list | tuple):
         return ()
 
@@ -43,6 +48,11 @@ def sanitize_route(route: Any) -> tuple[str, ...]:
 
 
 def sanitize_filters(filters: Any) -> dict[str, Any]:
+    if isinstance(filters, str):
+        try:
+            filters = json.loads(filters)
+        except json.JSONDecodeError:
+            filters = {}
     if not isinstance(filters, dict):
         return {}
 
