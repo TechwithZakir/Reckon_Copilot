@@ -40,3 +40,19 @@ Expected behavior:
 - Do not call an LLM or add RAG until permission-safe context extraction is complete.
 - Frappe Role Permission and User Permission checks must be authoritative.
 - Fingerprints should be based on canonical server-resolved context, not raw browser state.
+
+## Phase 3 permission boundary
+
+All future context, knowledge, cache, analytics and provider code must call the reusable permission boundary in `reckon_copilot.permissions` before returning or using ERPNext-derived context.
+
+Do not add ad-hoc permission checks directly in feature modules. If a new capability needs security behavior, extend `CopilotPermissionBoundary` and add tests there first.
+
+The boundary is responsible for:
+
+- rejecting Guest users
+- enforcing native Frappe read permissions for DocType and document contexts
+- enforcing report, workspace and dashboard access through Frappe APIs
+- applying User Permission scope checks such as company scope
+- redacting sensitive filters and non-context route details
+- rejecting unsupported or write capabilities unless explicitly permitted
+- proving Copilot cannot be used as a side channel for restricted ERPNext data
