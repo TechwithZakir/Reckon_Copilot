@@ -39,13 +39,13 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
     return ["Dashboard", titleCaseSlug(deskParts[1] || rawRoute[1] || "Dashboard")];
   }
 
-  if (window.query_report?.report_name && slug === "query-report") {
-    return ["Report", window.query_report.report_name];
+  if (slug === "query-report") {
+    return ["Report", window.query_report?.report_name || titleCaseSlug(deskParts[1] || rawRoute[1])];
   }
 
   if (
     window.cur_frm?.doctype &&
-    (rawRoute[0] === "Form" || deskParts.length > 1)
+    (rawRoute[0] === "Form" || (deskParts.length > 1 && slugify(window.cur_frm.doctype) === slug))
   ) {
     return [
       "Form",
@@ -67,9 +67,6 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
     return rawRoute;
   }
 
-  if (document.querySelector(".list-row-container, .list-header, .list-sidebar")) {
-    return ["List", titleCaseSlug(slug), "List"];
-  }
   if (document.querySelector(".workspace, .codex-editor, .widget-group")) {
     return ["Workspace", titleCaseSlug(slug)];
   }

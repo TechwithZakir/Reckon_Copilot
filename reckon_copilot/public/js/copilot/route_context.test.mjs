@@ -36,6 +36,31 @@ test("dashboard-view route is normalized as dashboard", () => {
   assert.equal(getPageType(route), "Dashboard");
 });
 
+test("module workspace route is not promoted to list by list-like dom", () => {
+  setDeskPath("/desk/projects");
+  global.document.querySelector = (selector) => {
+    return selector.includes("list-sidebar") ? {} : null;
+  };
+
+  const route = getCanonicalRoute(["projects"]);
+
+  assert.deepEqual(route, ["Workspace", "Projects"]);
+  assert.equal(getPageType(route), "Workspace");
+});
+
+test("query-report route beats stale form state", () => {
+  setDeskPath("/desk/query-report/Project%20Summary");
+  global.window.cur_frm = {
+    doctype: "Project",
+    doc: { name: "PROJ-0001" },
+  };
+
+  const route = getCanonicalRoute(["query-report", "Project Summary"]);
+
+  assert.deepEqual(route, ["Report", "Project Summary"]);
+  assert.equal(getPageType(route), "Report");
+});
+
 test("stale form global does not turn a one-part list route into form", () => {
   setDeskPath("/desk/sales-order");
   global.window.cur_frm = {
