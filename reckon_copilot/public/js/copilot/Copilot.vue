@@ -90,6 +90,7 @@ watch(() => props.pageType, loadConfiguration);
   <ContextHeader
     v-if="state.isOpen && !state.isMinimized"
     :page-type="routeContext?.page_type || pageType"
+    :detail="contextDetail"
     :fingerprint="contextFingerprint"
   />
 
