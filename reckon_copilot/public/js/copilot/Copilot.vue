@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { Button } from "frappe-ui";
 
 import { getShellConfig, savePreferences } from "./api";
 import Chat from "./Chat.vue";
@@ -54,14 +53,14 @@ watch(() => props.pageType, loadConfiguration);
 </script>
 
 <template>
-  <Button
+  <button
     v-if="!state.isOpen"
-    class="rc-launcher"
-    variant="solid"
+    class="rc-button rc-button-solid rc-launcher"
+    type="button"
     @click="dispatch({ type: 'open' })"
   >
     Reckon Copilot
-  </Button>
+  </button>
 
   <aside
     v-else
@@ -75,24 +74,33 @@ watch(() => props.pageType, loadConfiguration);
         <span>Phase 1 shell</span>
       </div>
       <div class="rc-header-actions">
-        <Button
-          variant="ghost"
-          icon="lucide-settings"
+        <button
+          class="rc-icon-button"
+          type="button"
           :aria-label="settingsOpen ? 'Close settings' : 'Open settings'"
+          title="Settings"
           @click="settingsOpen = !settingsOpen"
-        />
-        <Button
-          variant="ghost"
-          icon="lucide-minus"
+        >
+          <span aria-hidden="true">*</span>
+        </button>
+        <button
+          class="rc-icon-button"
+          type="button"
           :aria-label="panelLabel"
+          title="Minimize"
           @click="dispatch({ type: 'toggle-minimize' })"
-        />
-        <Button
-          variant="ghost"
-          icon="lucide-x"
+        >
+          <span aria-hidden="true">-</span>
+        </button>
+        <button
+          class="rc-icon-button"
+          type="button"
           aria-label="Close Reckon Copilot"
+          title="Close"
           @click="dispatch({ type: 'close' })"
-        />
+        >
+          <span aria-hidden="true">x</span>
+        </button>
       </div>
     </header>
 

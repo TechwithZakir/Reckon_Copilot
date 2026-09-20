@@ -6,7 +6,6 @@
     "test:vue": "node scripts/validate_vue.mjs"
   },
   "dependencies": {
-    "frappe-ui": "^1.0.0-beta.29",
     "vue": "^3.3.0"
   },
   "devDependencies": {

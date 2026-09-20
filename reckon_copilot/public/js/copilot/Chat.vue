@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch } from "vue";
-import { Button } from "frappe-ui";
 
 const props = defineProps({ initialPrompt: { type: String, default: "" } });
 const draft = ref(props.initialPrompt);
@@ -19,7 +18,7 @@ watch(() => props.initialPrompt, (value) => {
     </div>
     <div class="rc-composer">
       <textarea v-model="draft" rows="3" placeholder="Ask about this page" disabled />
-      <Button variant="solid" disabled>Send</Button>
+      <button class="rc-button rc-button-solid" type="button" disabled>Send</button>
     </div>
   </section>
 </template>
