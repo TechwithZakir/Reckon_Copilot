@@ -56,6 +56,26 @@ class PermissionBoundaryTests(unittest.TestCase):
                 }
             )
 
+    def test_new_unsaved_form_uses_doctype_create_permission(self):
+        boundary = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                doctype_permissions={("Customer", "create"): True},
+                document_permissions={
+                    ("Customer", "new-customer-uqqpmbuqwa", "read"): False,
+                },
+            )
+        )
+
+        authorized = boundary.authorize(
+            {
+                "page_type": "Form",
+                "doctype": "Customer",
+                "document_name": "new-customer-uqqpmbuqwa",
+            }
+        )
+
+        self.assertEqual(authorized.context["doctype"], "Customer")
+
     def test_user_permission_blocks_company_scope(self):
         boundary = CopilotPermissionBoundary(
             StaticPermissionAdapter(

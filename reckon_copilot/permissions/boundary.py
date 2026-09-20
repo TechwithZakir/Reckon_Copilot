@@ -303,10 +303,13 @@ class CopilotPermissionBoundary:
         if page_type == "Form":
             doctype = _required(context, "doctype")
             document_name = context.get("document_name")
-            if document_name:
+            if document_name and not _is_new_document_name(document_name):
                 allowed = self.adapter.has_document_permission(doctype, document_name, "read", user)
             else:
-                allowed = self.adapter.has_doctype_permission(doctype, "read", user)
+                allowed = (
+                    self.adapter.has_doctype_permission(doctype, "read", user)
+                    or self.adapter.has_doctype_permission(doctype, "create", user)
+                )
             if not allowed:
                 raise PermissionDenied("No read permission for requested document")
             return
@@ -379,6 +382,11 @@ def _required(context: dict[str, Any], field: str) -> str:
 
 def _is_sensitive_filter(key: Any) -> bool:
     return str(key).lower() in {"password", "api_key", "api_secret", "secret", "token"}
+
+
+def _is_new_document_name(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text.startswith("new-")
 
 
 def authorize_context(
