@@ -10,8 +10,12 @@ export function getShellConfig(pageType) {
   return call("reckon_copilot.api.shell.get_shell_config", { page_type: pageType });
 }
 
-export function getRouteContext(route, filters = {}) {
-  return call("reckon_copilot.api.context.get_context", { route, filters });
+export function getRouteContext(route, filters = {}, pageType = "Page") {
+  return call("reckon_copilot.api.context.get_context", {
+    route,
+    filters,
+    page_type: pageType,
+  });
 }
 
 export function savePreferences(preferences) {

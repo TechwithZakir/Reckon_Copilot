@@ -20,6 +20,10 @@ def _whitelist(**kwargs: Any):
 
 
 @_whitelist(allow_guest=False)
-def get_context(route: Any = None, filters: Any = None) -> dict[str, Any]:
+def get_context(
+    route: Any = None,
+    filters: Any = None,
+    page_type: Any = None,
+) -> dict[str, Any]:
     """Return a sanitized, versioned context for the current Desk route."""
-    return build_context(route=route, filters=filters)
+    return build_context(route=route, filters=filters, page_type=page_type)

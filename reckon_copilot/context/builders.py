@@ -17,6 +17,7 @@ MAX_FILTERS = 20
 class ContextInput:
     route: tuple[str, ...]
     filters: dict[str, Any]
+    page_type: str | None
 
 
 def sanitize_scalar(value: Any) -> str | int | float | bool | None:
@@ -63,8 +64,23 @@ def sanitize_filters(filters: Any) -> dict[str, Any]:
     return clean
 
 
-def normalize_context_input(route: Any = None, filters: Any = None) -> ContextInput:
-    return ContextInput(route=sanitize_route(route), filters=sanitize_filters(filters))
+def sanitize_page_type(page_type: Any = None) -> str | None:
+    text = sanitize_scalar(page_type)
+    if not isinstance(text, str):
+        return None
+    return text if text in SUPPORTED_ROUTE_TYPES else None
+
+
+def normalize_context_input(
+    route: Any = None,
+    filters: Any = None,
+    page_type: Any = None,
+) -> ContextInput:
+    return ContextInput(
+        route=sanitize_route(route),
+        filters=sanitize_filters(filters),
+        page_type=sanitize_page_type(page_type),
+    )
 
 
 def route_type_for(parts: tuple[str, ...]) -> str:
@@ -72,6 +88,12 @@ def route_type_for(parts: tuple[str, ...]) -> str:
         return "Page"
     route_type = parts[0]
     return route_type if route_type in SUPPORTED_ROUTE_TYPES else "Page"
+
+
+def humanize_slug(value: str | None) -> str | None:
+    if not value:
+        return None
+    return " ".join(part.capitalize() for part in value.replace("_", "-").split("-") if part)
 
 
 def _form_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
@@ -84,34 +106,46 @@ def _form_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, 
 
 
 def _list_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
+    doctype = parts[1] if len(parts) > 1 else None
+    if len(parts) == 1:
+        doctype = humanize_slug(parts[0])
     return {
         "page_type": "List",
-        "doctype": parts[1] if len(parts) > 1 else None,
+        "doctype": doctype,
         "view": parts[2] if len(parts) > 2 else None,
         "filters": filters,
     }
 
 
 def _report_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
+    report_name = parts[1] if len(parts) > 1 else None
+    if len(parts) == 1:
+        report_name = humanize_slug(parts[0])
     return {
         "page_type": "Report",
-        "report_name": parts[1] if len(parts) > 1 else None,
+        "report_name": report_name,
         "filters": filters,
     }
 
 
 def _dashboard_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
+    dashboard_name = parts[1] if len(parts) > 1 else None
+    if len(parts) == 1:
+        dashboard_name = humanize_slug(parts[0])
     return {
         "page_type": "Dashboard",
-        "dashboard_name": parts[1] if len(parts) > 1 else None,
+        "dashboard_name": dashboard_name,
         "filters": filters,
     }
 
 
 def _workspace_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
+    workspace_name = parts[1] if len(parts) > 1 else None
+    if len(parts) == 1:
+        workspace_name = humanize_slug(parts[0])
     return {
         "page_type": "Workspace",
-        "workspace_name": parts[1] if len(parts) > 1 else None,
+        "workspace_name": workspace_name,
         "filters": filters,
     }
 
@@ -143,9 +177,9 @@ def fingerprint_context(context: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
 
 
-def build_context(route: Any = None, filters: Any = None) -> dict[str, Any]:
-    normalized = normalize_context_input(route=route, filters=filters)
-    route_type = route_type_for(normalized.route)
+def build_context(route: Any = None, filters: Any = None, page_type: Any = None) -> dict[str, Any]:
+    normalized = normalize_context_input(route=route, filters=filters, page_type=page_type)
+    route_type = normalized.page_type or route_type_for(normalized.route)
     adapter = ADAPTERS[route_type]
     context = {
         "version": CONTEXT_VERSION,

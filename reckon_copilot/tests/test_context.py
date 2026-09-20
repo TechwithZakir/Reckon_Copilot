@@ -5,6 +5,7 @@ import unittest
 from reckon_copilot.context.builders import (
     build_context,
     fingerprint_context,
+    humanize_slug,
     normalize_context_input,
 )
 
@@ -60,6 +61,21 @@ class ContextNormalizationTests(unittest.TestCase):
 
         self.assertEqual(context["page_type"], "Page")
         self.assertEqual(context["page_name"], "buying")
+
+    def test_page_type_hint_normalizes_single_slug_list_routes(self):
+        context = build_context(route=["delivery-note"], page_type="List")
+
+        self.assertEqual(context["page_type"], "List")
+        self.assertEqual(context["doctype"], "Delivery Note")
+        self.assertEqual(context["route"], ["delivery-note"])
+
+    def test_invalid_page_type_hint_is_ignored(self):
+        context = build_context(route=["delivery-note"], page_type="Unsafe")
+
+        self.assertEqual(context["page_type"], "Page")
+
+    def test_slug_humanization_handles_frappe_route_names(self):
+        self.assertEqual(humanize_slug("item-wise-consumption"), "Item Wise Consumption")
 
     def test_fingerprint_is_deterministic_and_changes_with_route(self):
         first = build_context(route=["List", "Item"])
