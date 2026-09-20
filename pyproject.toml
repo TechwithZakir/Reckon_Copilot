@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reckon-copilot"
+version = "0.0.1"
+description = "Reckon Copilot foundation for Frappe and ERPNext v16+"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [
+  { name = "Reckon Technologies Ltd.", email = "hello@reckon.tech" }
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://www.reckon.tech"
+
+[tool.setuptools]
+packages = ["reckon_copilot", "reckon_copilot.api", "reckon_copilot.providers"]
+include-package-data = true
+
