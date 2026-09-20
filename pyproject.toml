@@ -21,6 +21,7 @@ Homepage = "https://www.reckon.tech"
 packages = [
   "reckon_copilot",
   "reckon_copilot.api",
+  "reckon_copilot.context",
   "reckon_copilot.providers",
   "reckon_copilot.reckon_copilot",
   "reckon_copilot.reckon_copilot.doctype",

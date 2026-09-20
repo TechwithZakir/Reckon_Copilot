@@ -11,6 +11,7 @@ PROMPTS = {
     "Form": ["Explain this document", "What should I review?"],
     "List": ["Summarize this list", "Which filters may help?"],
     "Report": ["Explain this report", "What does this report show?"],
+    "Dashboard": ["Explain these metrics", "What changed recently?"],
     "Workspace": ["What can I do here?", "Show common tasks"],
     "Page": ["What is this page?", "Show available help"],
 }

@@ -9,7 +9,10 @@ import Settings from "./Settings.vue";
 import SuggestedPrompts from "./SuggestedPrompts.vue";
 import { createShellState, reduceShellState } from "./shell_state.mjs";
 
-const props = defineProps({ pageType: { type: String, default: "Page" } });
+const props = defineProps({
+  pageType: { type: String, default: "Page" },
+  routeContext: { type: Object, default: null },
+});
 const state = ref(createShellState());
 const prompts = ref([]);
 const selectedPrompt = ref("");
@@ -20,9 +23,11 @@ const panelLabel = computed(() =>
 );
 
 const summaryText = computed(() => {
-  const type = props.pageType || "Page";
-  return `I am ready to help with this ${type.toLowerCase()} context. Phase 1 is running in UI-only mode.`;
+  const type = props.routeContext?.page_type || props.pageType || "Page";
+  return `I am ready to help with this ${type.toLowerCase()} context. Phase 2 uses sanitized route context only.`;
 });
+
+const contextFingerprint = computed(() => props.routeContext?.fingerprint || "");
 
 function dispatch(action) {
   state.value = reduceShellState(state.value, action);
@@ -67,7 +72,11 @@ watch(() => props.pageType, loadConfiguration);
     Reckon Copilot
   </button>
 
-  <ContextHeader v-if="state.isOpen && !state.isMinimized" :page-type="pageType" />
+  <ContextHeader
+    v-if="state.isOpen && !state.isMinimized"
+    :page-type="routeContext?.page_type || pageType"
+    :fingerprint="contextFingerprint"
+  />
 
   <aside
     v-if="state.isOpen"
