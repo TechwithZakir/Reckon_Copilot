@@ -29,6 +29,21 @@ const summaryText = computed(() => {
 
 const contextFingerprint = computed(() => props.routeContext?.fingerprint || "");
 
+const contextDetail = computed(() => {
+  const context = props.routeContext;
+  const type = context?.page_type || props.pageType || "Page";
+  if (!context) return type;
+
+  const label =
+    context.doctype ||
+    context.report_name ||
+    context.dashboard_name ||
+    context.workspace_name ||
+    context.page_name;
+  const record = context.document_name;
+  return [type, label, record].filter(Boolean).join(" / ");
+});
+
 function dispatch(action) {
   state.value = reduceShellState(state.value, action);
 }
@@ -225,6 +240,9 @@ watch(() => props.pageType, loadConfiguration);
           <div>
             <h2>Hi there,</h2>
             <p>{{ summaryText }}</p>
+            <div class="rc-context-detail" aria-label="Detected context">
+              {{ contextDetail }}
+            </div>
           </div>
           <div class="rc-metric-grid" aria-label="Current insight summary">
             <div class="rc-metric is-critical">

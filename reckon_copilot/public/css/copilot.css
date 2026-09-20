@@ -187,9 +187,23 @@
 }
 
 .rc-hero-card p {
-  margin: 4px 0 13px;
+  margin: 4px 0 10px;
   color: #24466f;
   font-size: 13px;
+}
+
+.rc-context-detail {
+  display: inline-flex;
+  max-width: 100%;
+  margin-bottom: 13px;
+  padding: 5px 9px;
+  border: 1px solid #cfe1fb;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f5fae;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .rc-metric-grid {
