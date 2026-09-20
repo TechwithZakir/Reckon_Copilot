@@ -1,66 +1,9 @@
 import { createApp, h, reactive } from "vue";
 import Copilot from "./Copilot.vue";
 import { getRouteContext } from "./api";
+import { getCanonicalRoute, getPageType } from "./route_context.mjs";
 
 const ROOT_ID = "reckon-copilot-root";
-
-function getRoute() {
-  return window.frappe?.get_route?.() || [];
-}
-
-function titleCaseSlug(value) {
-  return String(value || "")
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function getDeskSlug() {
-  const match = window.location.pathname.match(/\/desk\/([^/?#]+)/);
-  return match ? decodeURIComponent(match[1]) : "";
-}
-
-function getCanonicalRoute(rawRoute = getRoute()) {
-  if (window.cur_frm?.doctype) {
-    return [
-      "Form",
-      window.cur_frm.doctype,
-      window.cur_frm.doc?.name || rawRoute[2] || rawRoute[1],
-    ].filter(Boolean);
-  }
-
-  if (window.cur_list?.doctype) {
-    return ["List", window.cur_list.doctype, window.cur_list.view_name || "List"];
-  }
-
-  if (window.query_report?.report_name) {
-    return ["Report", window.query_report.report_name];
-  }
-
-  const routeType = rawRoute[0];
-  if (["Form", "List", "Report", "Dashboard", "Workspace"].includes(routeType)) {
-    return rawRoute;
-  }
-
-  const slug = getDeskSlug() || routeType;
-  if (!slug) return rawRoute;
-  if (document.querySelector(".list-row-container, .list-header, .list-sidebar")) {
-    return ["List", titleCaseSlug(slug), "List"];
-  }
-  if (document.querySelector(".workspace, .codex-editor, .widget-group")) {
-    return ["Workspace", titleCaseSlug(slug)];
-  }
-  return rawRoute;
-}
-
-function getPageType(route = getRoute()) {
-  const routeType = route[0];
-  if (["Form", "List", "Report", "Dashboard", "Workspace"].includes(routeType)) {
-    return routeType;
-  }
-  return "Page";
-}
 
 function getRouteFilters() {
   const query = window.frappe?.utils?.get_query_params?.() || {};
@@ -102,7 +45,17 @@ export function mountCopilot() {
     }
   }
 
-  window.frappe?.router?.on?.("change", syncContext);
+  function scheduleContextSync() {
+    syncContext();
+    window.setTimeout(syncContext, 150);
+    window.setTimeout(syncContext, 500);
+  }
+
+  window.frappe?.router?.on?.("change", scheduleContextSync);
+  window.addEventListener("popstate", syncContext);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) syncContext();
+  });
   syncContext();
 
   createApp({

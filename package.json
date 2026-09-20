@@ -2,7 +2,7 @@
   "name": "reckon-copilot",
   "private": true,
   "scripts": {
-    "test": "node --test reckon_copilot/public/js/copilot/shell_state.test.mjs",
+    "test": "node --test reckon_copilot/public/js/copilot/*.test.mjs",
     "test:vue": "node scripts/validate_vue.mjs"
   },
   "dependencies": {
