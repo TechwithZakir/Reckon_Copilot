@@ -1,0 +1,72 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "field:user",
+  "creation": "2026-09-20 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "user",
+    "enabled",
+    "notifications_enabled",
+    "response_sound_enabled"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "User",
+      "options": "User",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "default": "1",
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "label": "Copilot Enabled"
+    },
+    {
+      "default": "1",
+      "fieldname": "notifications_enabled",
+      "fieldtype": "Check",
+      "label": "Notifications Enabled"
+    },
+    {
+      "default": "0",
+      "fieldname": "response_sound_enabled",
+      "fieldtype": "Check",
+      "label": "Response Sound Enabled"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "is_submittable": 0,
+  "links": [],
+  "modified": "2026-09-20 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Reckon Copilot",
+  "name": "Copilot User Preference",
+  "naming_rule": "By fieldname",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "quick_entry": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "user",
+  "track_changes": 1
+}

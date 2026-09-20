@@ -33,3 +33,23 @@ The health endpoint is available as:
 
 No real AI provider is configured or called in Phase 0. Use a fake provider in tests to validate the provider interface only.
 
+## Phase 1 Verification
+
+Run frontend state tests:
+
+```powershell
+node --test reckon_copilot/public/js/copilot/shell_state.test.mjs
+```
+
+From the bench, install declared frontend dependencies, build assets and migrate:
+
+```powershell
+cd apps/reckon_copilot
+yarn install --frozen-lockfile
+cd ../..
+bench build --app reckon_copilot
+bench --site <site> migrate
+bench --site <site> run-tests --app reckon_copilot
+```
+
+Verify the shell on a Desk Form, List, Report and Workspace. Confirm open, close, minimize, keyboard focus, responsive layout and persisted sound settings.

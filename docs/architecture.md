@@ -18,5 +18,12 @@ Phase 0 does not implement Desk UI, RAG, LLM calls, analytics, caching, backgrou
 
 The app package is `reckon_copilot`. Backend API modules live under `reckon_copilot.api`. Provider contracts live under `reckon_copilot.providers`.
 
-Later phases should add new responsibilities behind these boundaries without sending unrestricted ERPNext data to provider implementations.
+## Phase 1 Desk Shell
 
+The Desk shell is a Vue 3 component tree compiled by Frappe's native esbuild pipeline and included through `app_include_js` and `app_include_css`. It mounts alongside ERPNext Desk and does not replace Desk routing or layout.
+
+Preferences are stored in `Copilot User Preference`. Browser requests never select a user: authenticated API methods bind reads and writes to `frappe.session.user`. Direct DocType access remains limited to System Manager.
+
+The shell reads only the active route type in Phase 1. It does not read document fields or send page data to a provider.
+
+Later phases should add new responsibilities behind these boundaries without sending unrestricted ERPNext data to provider implementations.

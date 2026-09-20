@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "reckon_copilot"
 version = "0.0.1"
-description = "Reckon Copilot foundation for Frappe and ERPNext v16+"
+description = "Reckon Copilot for Frappe and ERPNext v16+"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
@@ -23,5 +23,7 @@ packages = [
   "reckon_copilot.api",
   "reckon_copilot.providers",
   "reckon_copilot.reckon_copilot",
+  "reckon_copilot.reckon_copilot.doctype",
+  "reckon_copilot.reckon_copilot.doctype.copilot_user_preference",
 ]
 include-package-data = true

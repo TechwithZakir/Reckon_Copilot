@@ -1,0 +1,15 @@
+{
+  "name": "reckon-copilot",
+  "private": true,
+  "scripts": {
+    "test": "node --test reckon_copilot/public/js/copilot/shell_state.test.mjs",
+    "test:vue": "node scripts/validate_vue.mjs"
+  },
+  "dependencies": {
+    "frappe-ui": "^1.0.0-beta.29",
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "3.5.43"
+  }
+}

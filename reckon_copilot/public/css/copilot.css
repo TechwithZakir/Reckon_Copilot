@@ -1,0 +1,149 @@
+#reckon-copilot-root {
+  position: relative;
+  z-index: 1040;
+  letter-spacing: 0;
+}
+
+.rc-launcher {
+  position: fixed !important;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1040;
+}
+
+.rc-panel {
+  position: fixed;
+  top: var(--navbar-height, 48px);
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: min(400px, 100vw);
+  flex-direction: column;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-color, #d1d8dd);
+  background: var(--fg-color, #fff);
+  color: var(--text-color, #1f272e);
+  box-shadow: -8px 0 24px rgb(0 0 0 / 8%);
+}
+
+.rc-panel.is-minimized {
+  bottom: auto;
+  width: min(400px, 100vw);
+}
+
+.rc-panel-header,
+.rc-context-header,
+.rc-setting-row,
+.rc-composer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rc-panel-header {
+  min-height: 56px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color, #d1d8dd);
+}
+
+.rc-panel-header > div:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.rc-panel-header span,
+.rc-context-label,
+.rc-muted,
+.rc-empty-state span {
+  color: var(--text-muted, #6b7785);
+  font-size: 12px;
+}
+
+.rc-header-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.rc-context-header,
+.rc-section,
+.rc-chat {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color, #d1d8dd);
+}
+
+.rc-section h3,
+.rc-chat h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.rc-section [data-slot="switch"] + [data-slot="switch"] {
+  margin-top: 10px;
+}
+
+.rc-prompt-list {
+  display: grid;
+  gap: 8px;
+}
+
+.rc-prompt {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border-color, #d1d8dd);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.rc-prompt:hover,
+.rc-prompt:focus-visible {
+  border-color: var(--primary-color, #2490ef);
+  outline: none;
+}
+
+.rc-setting-row {
+  min-height: 36px;
+}
+
+.rc-empty-state {
+  display: flex;
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.rc-composer {
+  align-items: flex-end;
+}
+
+.rc-composer textarea {
+  min-width: 0;
+  flex: 1;
+  resize: vertical;
+}
+
+.rc-status,
+.rc-error {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 12px;
+}
+
+.rc-error {
+  color: var(--red-600, #c92a2a);
+  background: var(--red-50, #fff5f5);
+}
+
+@media (max-width: 768px) {
+  .rc-panel {
+    top: var(--navbar-height, 48px);
+    width: 100vw;
+  }
+}

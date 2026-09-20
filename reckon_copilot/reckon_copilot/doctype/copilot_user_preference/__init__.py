@@ -1,0 +1,1 @@
+"""Copilot User Preference DocType."""

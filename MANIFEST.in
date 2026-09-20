@@ -1,0 +1,1 @@
+recursive-include reckon_copilot *.css *.js *.json *.mjs *.vue

@@ -1,12 +1,15 @@
 app_name = "reckon_copilot"
 app_title = "Reckon Copilot"
 app_publisher = "Reckon Technologies Ltd."
-app_description = "Reckon Copilot foundation for Frappe and ERPNext v16+"
+app_description = "Reckon Copilot for Frappe and ERPNext v16+"
 app_email = "hello@reckon.tech"
 app_license = "Proprietary"
 app_version = "0.0.1"
 
 required_apps = ["frappe", "erpnext"]
+
+app_include_js = ["reckon_copilot.bundle.js"]
+app_include_css = ["reckon_copilot.bundle.css"]
 
 
 def after_install():
@@ -17,4 +20,3 @@ def after_install():
 def before_uninstall():
     """Uninstall hook reserved for Phase 0 validation."""
     return None
-
