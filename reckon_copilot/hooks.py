@@ -9,7 +9,7 @@ app_version = "0.0.1"
 required_apps = ["frappe", "erpnext"]
 
 app_include_js = ["reckon_copilot.bundle.js"]
-app_include_css = ["reckon_copilot.bundle.css"]
+app_include_css = ["copilot.css"]
 
 
 def after_install():
