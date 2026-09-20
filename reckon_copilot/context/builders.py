@@ -187,6 +187,34 @@ def fingerprint_context(context: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
 
 
+def promote_workspace_slug_to_doctype(
+    context: dict[str, Any],
+    workspace_exists,
+    doctype_exists,
+    is_tree_doctype=None,
+) -> dict[str, Any]:
+    if context.get("page_type") != "Workspace":
+        return context
+
+    workspace_name = context.get("workspace_name")
+    if not workspace_name or workspace_exists(workspace_name):
+        return context
+    if not doctype_exists(workspace_name):
+        return context
+
+    promoted = dict(context)
+    promoted["page_type"] = "List"
+    promoted["doctype"] = workspace_name
+    promoted["view"] = "Tree" if is_tree_doctype and is_tree_doctype(workspace_name) else "List"
+    promoted.pop("workspace_name", None)
+    promoted["permission"] = {
+        **dict(promoted.get("permission") or {}),
+        "canonicalized_from": "workspace_slug",
+    }
+    promoted["fingerprint"] = fingerprint_context(promoted)
+    return promoted
+
+
 def build_context(route: Any = None, filters: Any = None, page_type: Any = None) -> dict[str, Any]:
     normalized = normalize_context_input(route=route, filters=filters, page_type=page_type)
     route_type = normalized.page_type or route_type_for(normalized.route)

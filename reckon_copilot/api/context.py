@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from reckon_copilot.context.builders import build_context, fingerprint_context
+from reckon_copilot.context.builders import (
+    build_context,
+    fingerprint_context,
+    promote_workspace_slug_to_doctype,
+)
 from reckon_copilot.permissions import authorize_context
 
 
@@ -20,6 +24,32 @@ def _whitelist(**kwargs: Any):
     return frappe.whitelist(**kwargs)
 
 
+def _canonicalize_with_frappe(context: dict[str, Any]) -> dict[str, Any]:
+    try:
+        import frappe  # type: ignore
+    except Exception:
+        return context
+
+    def workspace_exists(name: str) -> bool:
+        return bool(frappe.db.exists("Workspace", name))
+
+    def doctype_exists(name: str) -> bool:
+        return bool(frappe.db.exists("DocType", name))
+
+    def is_tree_doctype(name: str) -> bool:
+        try:
+            return bool(frappe.get_meta(name).is_tree)
+        except Exception:
+            return False
+
+    return promote_workspace_slug_to_doctype(
+        context,
+        workspace_exists=workspace_exists,
+        doctype_exists=doctype_exists,
+        is_tree_doctype=is_tree_doctype,
+    )
+
+
 @_whitelist(allow_guest=False)
 def get_context(
     route: Any = None,
@@ -28,6 +58,7 @@ def get_context(
 ) -> dict[str, Any]:
     """Return a sanitized, permission-authorized context for the current Desk route."""
     context = build_context(route=route, filters=filters, page_type=page_type)
+    context = _canonicalize_with_frappe(context)
     authorized = authorize_context(context)
     result = authorized.context
     result["fingerprint"] = fingerprint_context(result)

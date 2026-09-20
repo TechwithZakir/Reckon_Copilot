@@ -7,6 +7,7 @@ from reckon_copilot.context.builders import (
     fingerprint_context,
     humanize_slug,
     normalize_context_input,
+    promote_workspace_slug_to_doctype,
 )
 
 
@@ -65,6 +66,34 @@ class ContextNormalizationTests(unittest.TestCase):
 
         self.assertEqual(context["page_type"], "Workspace")
         self.assertEqual(context["workspace_name"], "Buying")
+
+    def test_workspace_slug_promotes_to_tree_doctype_when_workspace_missing(self):
+        context = build_context(route=["Workspace", "Customer Group"])
+
+        promoted = promote_workspace_slug_to_doctype(
+            context,
+            workspace_exists=lambda name: False,
+            doctype_exists=lambda name: name == "Customer Group",
+            is_tree_doctype=lambda name: True,
+        )
+
+        self.assertEqual(promoted["page_type"], "List")
+        self.assertEqual(promoted["doctype"], "Customer Group")
+        self.assertEqual(promoted["view"], "Tree")
+        self.assertNotIn("workspace_name", promoted)
+
+    def test_existing_workspace_is_not_promoted_to_doctype(self):
+        context = build_context(route=["Workspace", "Projects"])
+
+        promoted = promote_workspace_slug_to_doctype(
+            context,
+            workspace_exists=lambda name: True,
+            doctype_exists=lambda name: True,
+            is_tree_doctype=lambda name: True,
+        )
+
+        self.assertEqual(promoted["page_type"], "Workspace")
+        self.assertEqual(promoted["workspace_name"], "Projects")
 
     def test_unknown_route_falls_back_to_page_context(self):
         context = build_context(route=["buying"])
