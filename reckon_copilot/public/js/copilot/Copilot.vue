@@ -29,6 +29,23 @@ const summaryText = computed(() => {
 
 const contextFingerprint = computed(() => props.routeContext?.fingerprint || "");
 
+function titleCaseSlug(value) {
+  return String(value || "")
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function routeLabel(context) {
+  const route = Array.isArray(context?.route) ? context.route : [];
+  if (route[1]) return titleCaseSlug(route[1]);
+  if (route[0] && !["Form", "List", "Report", "Dashboard", "Workspace"].includes(route[0])) {
+    return titleCaseSlug(route[0]);
+  }
+  return "";
+}
+
 const contextDetail = computed(() => {
   const context = props.routeContext;
   const type = context?.page_type || props.pageType || "Page";
@@ -39,8 +56,9 @@ const contextDetail = computed(() => {
     context.report_name ||
     context.dashboard_name ||
     context.workspace_name ||
-    context.page_name;
-  const record = context.document_name;
+    context.page_name ||
+    routeLabel(context);
+  const record = context.document_name || (context.page_type === "Form" ? context.route?.[2] : "");
   return [type, label, record].filter(Boolean).join(" / ");
 });
 
