@@ -49,9 +49,33 @@ async function send() {
       >
         <p>{{ message.text }}</p>
         <small v-if="message.meta">
-          {{ message.meta.source || message.meta.provider || "copilot" }}
+          {{ message.meta.intent || message.meta.source || message.meta.provider || "copilot" }}
           <span v-if="message.meta.cacheHit">cached</span>
         </small>
+        <div v-if="message.meta?.evidence?.length" class="rc-evidence-list" aria-label="Evidence">
+          <span
+            v-for="item in message.meta.evidence"
+            :key="item.chunk_id"
+            class="rc-evidence-chip"
+            :title="item.locator"
+          >
+            {{ item.source_title || item.chunk_id }}
+          </span>
+        </div>
+        <ul v-if="message.meta?.warnings?.length" class="rc-message-notes">
+          <li v-for="warning in message.meta.warnings" :key="warning">{{ warning }}</li>
+        </ul>
+        <div v-if="message.meta?.followups?.length" class="rc-followups">
+          <button
+            v-for="followup in message.meta.followups"
+            :key="followup"
+            class="rc-followup"
+            type="button"
+            @click="draft = followup"
+          >
+            {{ followup }}
+          </button>
+        </div>
       </article>
     </div>
     <div class="rc-composer-box">

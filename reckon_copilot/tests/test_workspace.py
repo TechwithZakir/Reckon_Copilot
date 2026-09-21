@@ -16,13 +16,20 @@ class WorkspaceTests(unittest.TestCase):
         )
         workspace = json.loads(path.read_text())
         links = {link.get("link_to") for link in workspace["links"] if link.get("type") == "Link"}
+        shortcuts = {shortcut.get("link_to") for shortcut in workspace["shortcuts"]}
+        expected = {
+            "Copilot Knowledge Source",
+            "Copilot Knowledge Document",
+            "Copilot Knowledge Chunk",
+            "Copilot Knowledge Ingestion Job",
+            "Copilot Knowledge Vector Index",
+            "Copilot User Preference",
+            "Copilot Provider",
+            "Copilot Usage Log",
+        }
 
-        self.assertIn("Copilot Knowledge Source", links)
-        self.assertIn("Copilot Knowledge Document", links)
-        self.assertIn("Copilot Knowledge Chunk", links)
-        self.assertIn("Copilot Knowledge Ingestion Job", links)
-        self.assertIn("Copilot Knowledge Vector Index", links)
-        self.assertIn("Copilot User Preference", links)
+        self.assertTrue(expected.issubset(links))
+        self.assertTrue(expected.issubset(shortcuts))
 
     def test_reckon_copilot_workspace_is_administrator_only(self):
         path = (

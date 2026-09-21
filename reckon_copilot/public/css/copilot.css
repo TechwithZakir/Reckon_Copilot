@@ -473,6 +473,50 @@
   font-size: 10px;
 }
 
+.rc-evidence-list,
+.rc-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.rc-evidence-chip,
+.rc-followup {
+  max-width: 100%;
+  border: 1px solid #d5e5f8;
+  border-radius: 999px;
+  background: #fff;
+  color: #315f9a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.rc-evidence-chip {
+  padding: 4px 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-followup {
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.rc-followup:hover,
+.rc-followup:focus-visible {
+  border-color: #8ebdff;
+  outline: none;
+}
+
+.rc-message-notes {
+  margin: 7px 0 0;
+  padding-left: 16px;
+  color: #6f4600;
+  font-size: 11px;
+}
+
 .rc-message.is-user {
   justify-self: end;
   border-color: #bcd7ff;

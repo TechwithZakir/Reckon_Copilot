@@ -31,6 +31,10 @@ export function normalizeAskResponse(response) {
       cacheHit: Boolean(response.cache_hit),
       provider: response.provider,
       model: response.model,
+      intent: response.intent,
+      evidence: Array.isArray(response.evidence) ? response.evidence : [],
+      followups: Array.isArray(response.answer?.followups) ? response.answer.followups : [],
+      warnings: Array.isArray(response.answer?.warnings) ? response.answer.warnings : [],
     },
   };
 }

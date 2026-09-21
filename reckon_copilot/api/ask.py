@@ -19,6 +19,7 @@ from reckon_copilot.permissions.boundary import (
     authorize_context,
 )
 from reckon_copilot.providers.base import ProviderDisabled, ProviderRequest, ProviderResponseError, ProviderTimeout
+from reckon_copilot.providers.intent import classify_intent
 from reckon_copilot.providers.manager import ProviderConfig, ProviderManager, provider_manager_from_frappe
 from reckon_copilot.providers.prompts import PROMPT_VERSION, build_compact_prompt
 from reckon_copilot.providers.schemas import AnswerPayload, parse_answer_payload, validate_answer_payload
@@ -33,6 +34,8 @@ class AskResult:
     provider: str = "none"
     model: str = "none"
     latency_ms: int = 0
+    intent: str = "general"
+    evidence: tuple[dict[str, Any], ...] = ()
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -42,6 +45,8 @@ class AskResult:
             "provider": self.provider,
             "model": self.model,
             "latency_ms": self.latency_ms,
+            "intent": self.intent,
+            "evidence": list(self.evidence),
             "answer": self.payload.as_dict(),
         }
 
@@ -70,15 +75,22 @@ def ask_with_services(
         adapter=permission_adapter,
     ).context
     evidence = evidence or []
+    intent = classify_intent(question)
     if not evidence and rag:
         evidence = rag.build_context(question, authorized, user or "user@example.com").as_prompt_context()
     logger = usage_logger or InMemoryUsageLogger()
     config = provider_manager.config
-    prompt = build_compact_prompt(question, authorized, evidence)
+    prompt = build_compact_prompt(question, authorized, evidence, intent=intent)
 
     deterministic = answer_from_evidence(question, evidence)
     if deterministic:
-        result = AskResult(payload=deterministic, provider="knowledge", model="rules")
+        result = AskResult(
+            payload=deterministic,
+            provider="knowledge",
+            model="rules",
+            intent=intent,
+            evidence=tuple(_compact_evidence_meta(evidence, deterministic.evidence_ids)),
+        )
         logger.log(
             UsageRecord(
                 provider="knowledge",
@@ -122,6 +134,8 @@ def ask_with_services(
             "provider": response.provider,
             "model": response.model or "unknown",
             "latency_ms": response.latency_ms,
+            "intent": intent,
+            "evidence": _compact_evidence_meta(evidence, payload.evidence_ids),
         }
 
     identity = build_cache_identity(
@@ -133,7 +147,7 @@ def ask_with_services(
         model=config.model or "none",
         prompt_version=PROMPT_VERSION,
         data_version="knowledge-v1",
-        extra={"evidence_ids": ",".join(_evidence_ids(evidence))},
+        extra={"evidence_ids": ",".join(_evidence_ids(evidence)), "intent": intent},
     )
     cache_key = build_cache_key(identity, namespace="copilot:ask")
 
@@ -161,6 +175,8 @@ def ask_with_services(
             provider=value.get("provider") or config.provider,
             model=value.get("model") or config.model or "unknown",
             latency_ms=int(value.get("latency_ms") or 0),
+            intent=str(value.get("intent") or intent),
+            evidence=tuple(value.get("evidence") or _compact_evidence_meta(evidence, payload.evidence_ids)),
         )
     except (ProviderDisabled, ProviderTimeout, ProviderResponseError) as error:
         logger.log(
@@ -199,6 +215,24 @@ def answer_from_evidence(question: str, evidence: list[dict[str, Any]]) -> Answe
 
 def _evidence_ids(evidence: list[dict[str, Any]]) -> list[str]:
     return [str(item.get("chunk_id") or item.get("source_id") or "") for item in evidence if item.get("chunk_id") or item.get("source_id")]
+
+
+def _compact_evidence_meta(evidence: list[dict[str, Any]], selected_ids=()) -> list[dict[str, Any]]:
+    selected = set(selected_ids or [])
+    items = []
+    for item in evidence[:5]:
+        evidence_id = str(item.get("chunk_id") or item.get("source_id") or "")
+        if selected and evidence_id not in selected:
+            continue
+        items.append(
+            {
+                "chunk_id": evidence_id,
+                "source_title": str(item.get("source_title") or "")[:160],
+                "locator": str(item.get("locator") or "")[:200],
+                "score": item.get("score"),
+            }
+        )
+    return items
 
 
 def _frappe_site(frappe_module) -> str:

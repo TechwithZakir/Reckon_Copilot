@@ -128,6 +128,24 @@
       "type": "DocType"
     },
     {
+      "color": "Cyan",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Knowledge Documents",
+      "link_to": "Copilot Knowledge Document",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Gray",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Knowledge Chunks",
+      "link_to": "Copilot Knowledge Chunk",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
       "color": "Green",
       "doc_view": "List",
       "format": "{}",
@@ -151,6 +169,24 @@
       "format": "{}",
       "label": "Providers",
       "link_to": "Copilot Provider",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Red",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Usage Logs",
+      "link_to": "Copilot Usage Log",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Yellow",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "User Preferences",
+      "link_to": "Copilot User Preference",
       "stats_filter": "[]",
       "type": "DocType"
     }

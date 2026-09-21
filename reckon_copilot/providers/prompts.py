@@ -39,6 +39,7 @@ def build_compact_prompt(
     question: str,
     context: dict[str, Any],
     evidence: list[dict[str, Any]] | None = None,
+    intent: str = "general",
 ) -> PromptBundle:
     clean_context = compact_context(context)
     clean_evidence = compact_evidence(evidence or [])
@@ -52,6 +53,7 @@ def build_compact_prompt(
     user_prompt = "\n".join(
         [
             f"Question: {question.strip()[:800]}",
+            f"Intent: {intent}",
             "Sanitized context:",
             _clip(canonical_json(clean_context), MAX_CONTEXT_CHARS),
             "Compact evidence:",
