@@ -9,7 +9,7 @@ from reckon_copilot.context.builders import (
     fingerprint_context,
     promote_workspace_slug_to_doctype,
 )
-from reckon_copilot.permissions import authorize_context
+from reckon_copilot.permissions import PermissionDenied, authorize_context
 
 
 def _whitelist(**kwargs: Any):
@@ -59,7 +59,18 @@ def get_context(
     """Return a sanitized, permission-authorized context for the current Desk route."""
     context = build_context(route=route, filters=filters, page_type=page_type)
     context = _canonicalize_with_frappe(context)
-    authorized = authorize_context(context)
+    try:
+        authorized = authorize_context(context)
+    except PermissionDenied as error:
+        context["access_denied"] = True
+        context["permission"] = {
+            "mode": "frappe_boundary",
+            "enforcement": "phase_3",
+            "allowed": False,
+            "reason": str(error),
+        }
+        context["fingerprint"] = fingerprint_context(context)
+        return context
     result = authorized.context
     result["fingerprint"] = fingerprint_context(result)
     return result

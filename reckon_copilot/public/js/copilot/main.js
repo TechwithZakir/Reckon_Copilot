@@ -24,6 +24,7 @@ export function mountCopilot() {
   const context = reactive({
     pageType: getPageType(),
     routeContext: null,
+    contextAlert: "",
   });
 
   let requestId = 0;
@@ -37,10 +38,16 @@ export function mountCopilot() {
       if (currentRequest === requestId) {
         context.routeContext = routeContext;
         context.pageType = routeContext.page_type || context.pageType;
+        context.contextAlert = routeContext.access_denied
+          ? routeContext.permission?.reason ||
+            "Copilot cannot access this page with your current permissions."
+          : "";
       }
-    } catch (_error) {
+    } catch (error) {
       if (currentRequest === requestId) {
         context.routeContext = null;
+        context.contextAlert =
+          error?.message || "Copilot could not sync this page context. Please try again.";
       }
     }
   }
@@ -63,6 +70,7 @@ export function mountCopilot() {
       h(Copilot, {
         pageType: context.pageType,
         routeContext: context.routeContext,
+        contextAlert: context.contextAlert,
       }),
   }).mount(root);
 }

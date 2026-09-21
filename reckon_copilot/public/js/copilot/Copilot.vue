@@ -12,6 +12,7 @@ import { createShellState, reduceShellState } from "./shell_state.mjs";
 const props = defineProps({
   pageType: { type: String, default: "Page" },
   routeContext: { type: Object, default: null },
+  contextAlert: { type: String, default: "" },
 });
 const state = ref(createShellState());
 const prompts = ref([]);
@@ -24,6 +25,9 @@ const panelLabel = computed(() =>
 
 const summaryText = computed(() => {
   const type = props.routeContext?.page_type || props.pageType || "Page";
+  if (props.routeContext?.access_denied) {
+    return `I can see this is a ${type.toLowerCase()} page, but your current permissions do not allow Copilot to read its context.`;
+  }
   return `I am ready to help with this ${type.toLowerCase()} context. Phase 2 uses sanitized route context only.`;
 });
 
@@ -275,6 +279,9 @@ watch(() => props.pageType, loadConfiguration);
         Loading preferences...
       </p>
       <p v-if="state.error" class="rc-error" role="status">{{ state.error }}</p>
+      <p v-if="contextAlert" class="rc-context-alert" role="alert">
+        {{ contextAlert }}
+      </p>
       <Settings
         v-if="settingsOpen"
         :preferences="state.preferences"
