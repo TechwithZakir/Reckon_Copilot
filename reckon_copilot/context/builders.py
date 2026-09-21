@@ -130,7 +130,7 @@ def _list_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, 
 def _report_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
     report_name = parts[1] if len(parts) > 1 else None
     if len(parts) == 1:
-        report_name = humanize_slug(parts[0])
+        report_name = parts[0]
     return {
         "page_type": "Report",
         "report_name": report_name,

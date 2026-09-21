@@ -70,7 +70,7 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
   }
 
   if (slug === "query-report") {
-    return ["Report", window.query_report?.report_name || titleCaseSlug(deskParts[1] || rawRoute[1])];
+    return ["Report", window.query_report?.report_name || deskParts[1] || rawRoute[1]].filter(Boolean);
   }
 
   if (

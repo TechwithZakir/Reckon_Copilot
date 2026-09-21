@@ -78,6 +78,15 @@ test("query-report route beats stale form state", () => {
   assert.equal(getPageType(route), "Report");
 });
 
+test("query-report route preserves meaningful hyphens in report names", () => {
+  setDeskPath("/desk/query-report/Sales%20Person-wise%20Transaction%20Summary");
+
+  const route = getCanonicalRoute(["query-report", "Sales Person-wise Transaction Summary"]);
+
+  assert.deepEqual(route, ["Report", "Sales Person-wise Transaction Summary"]);
+  assert.equal(getPageType(route), "Report");
+});
+
 test("stale form global does not turn a one-part list route into form", () => {
   setDeskPath("/desk/sales-order");
   global.window.cur_frm = {

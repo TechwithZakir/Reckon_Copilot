@@ -45,6 +45,21 @@ class ContextNormalizationTests(unittest.TestCase):
         self.assertEqual(context["page_type"], "Report")
         self.assertEqual(context["report_name"], "Item Wise Consumption")
 
+    def test_report_context_preserves_meaningful_hyphens(self):
+        context = build_context(
+            route=["Report", "Sales Person-wise Transaction Summary"],
+            filters={"doc_type": "Sales Order"},
+        )
+
+        self.assertEqual(context["page_type"], "Report")
+        self.assertEqual(context["report_name"], "Sales Person-wise Transaction Summary")
+
+    def test_single_part_report_hint_preserves_hyphenated_report_name(self):
+        context = build_context(route=["Item-wise Sales Register"], page_type="Report")
+
+        self.assertEqual(context["page_type"], "Report")
+        self.assertEqual(context["report_name"], "Item-wise Sales Register")
+
     def test_dashboard_context_adapter(self):
         context = build_context(route=["Dashboard", "Buying"])
 
