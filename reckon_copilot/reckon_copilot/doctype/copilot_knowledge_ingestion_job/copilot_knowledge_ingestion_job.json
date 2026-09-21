@@ -1,0 +1,23 @@
+{
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2026-09-21 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["source_id", "status", "queued_at", "started_at", "finished_at", "error"],
+  "fields": [
+    {"fieldname": "source_id", "fieldtype": "Data", "label": "Source ID", "reqd": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "QUEUED\nEXTRACTING\nCHUNKING\nEMBEDDING\nINDEXING\nINDEXED\nAPPROVED\nSTALE\nFAILED\nRETIRED", "default": "QUEUED"},
+    {"fieldname": "queued_at", "fieldtype": "Datetime", "label": "Queued At"},
+    {"fieldname": "started_at", "fieldtype": "Datetime", "label": "Started At"},
+    {"fieldname": "finished_at", "fieldtype": "Datetime", "label": "Finished At"},
+    {"fieldname": "error", "fieldtype": "Small Text", "label": "Error"}
+  ],
+  "modified": "2026-09-21 00:00:00.000000",
+  "module": "Reckon Copilot",
+  "name": "Copilot Knowledge Ingestion Job",
+  "owner": "Administrator",
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}

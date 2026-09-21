@@ -27,3 +27,13 @@ Preferences are stored in `Copilot User Preference`. Browser requests never sele
 The shell reads only the active route type in Phase 1. It does not read document fields or send page data to a provider.
 
 Later phases should add new responsibilities behind these boundaries without sending unrestricted ERPNext data to provider implementations.
+
+## Phase 4 Knowledge Engine
+
+Phase 4 adds a knowledge-first retrieval engine for RAG. In Reckon Copilot, "learn" means ingesting approved content into a retrievable index: register, extract, normalize, chunk, index, approve and retrieve. It does not mean fine-tuning an LLM or modifying model weights.
+
+Supported source types are `ERP_DATABASE`, `INTERNAL_DOCUMENT`, `WEB_URL`, `MANUAL_URL`, `PDF`, `DOCX` and `MANUAL_TEXT`. Knowledge is separated into Source, Document and Chunk records, each with status, version and content hash metadata. Only approved sources are returned by retrieval.
+
+The baseline retriever uses deterministic keyword scoring and Frappe-compatible storage shapes. A provider-neutral `VectorStore` interface is also introduced with upsert, delete, similarity search, rebuild and health operations. The current implementation is native/in-memory for tests and local operation; a dedicated vector database can be added later behind the same interface without changing RAG callers.
+
+Retrieved content is always treated as untrusted data. RAG orchestration returns compact evidence objects with source attribution instead of whole documents.

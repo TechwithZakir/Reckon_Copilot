@@ -53,3 +53,18 @@ bench --site <site> run-tests --app reckon_copilot
 ```
 
 Verify the shell on a Desk Form, List, Report and Workspace. Confirm open, close, minimize, keyboard focus, responsive layout and persisted sound settings.
+
+## Phase 4 Verification
+
+Run the backend and frontend checks:
+
+```powershell
+python -m unittest discover reckon_copilot\tests
+python -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+From a Frappe bench, run `bench --site <site> migrate` after pulling Phase 4 so the Knowledge Source, Document, Chunk, Ingestion Job and Vector Index DocTypes are installed.
+
+Manual verification should cover creating manual knowledge, submitting a URL, processing PDF/DOCX content, approving a source, searching for compact evidence, confirming source attribution and confirming unapproved or permission-incompatible knowledge is excluded.

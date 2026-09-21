@@ -22,10 +22,17 @@ packages = [
   "reckon_copilot",
   "reckon_copilot.api",
   "reckon_copilot.context",
+  "reckon_copilot.jobs",
+  "reckon_copilot.knowledge",
   "reckon_copilot.permissions",
   "reckon_copilot.providers",
   "reckon_copilot.reckon_copilot",
   "reckon_copilot.reckon_copilot.doctype",
+  "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_chunk",
+  "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_document",
+  "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_ingestion_job",
+  "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_source",
+  "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_vector_index",
   "reckon_copilot.reckon_copilot.doctype.copilot_user_preference",
 ]
 include-package-data = true
