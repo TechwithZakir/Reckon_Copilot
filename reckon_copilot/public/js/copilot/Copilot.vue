@@ -346,7 +346,7 @@ watch(() => props.pageType, loadConfiguration);
       </div>
 
       <div class="rc-panel-footer">
-        <Chat :initial-prompt="selectedPrompt" />
+        <Chat :initial-prompt="selectedPrompt" :route-context="routeContext" />
         <div class="rc-runtime">
           <span><i aria-hidden="true"></i>Using Ollama (local)</span>
           <span>Tokens: 248</span>

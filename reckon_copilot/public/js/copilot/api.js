@@ -39,3 +39,11 @@ export function getRouteContext(route, filters = {}, pageType = "Page") {
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }
+
+export function askCopilot(question, context, evidence = []) {
+  return call("reckon_copilot.api.ask.ask", {
+    question,
+    context,
+    evidence,
+  });
+}

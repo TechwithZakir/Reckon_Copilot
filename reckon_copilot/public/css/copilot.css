@@ -443,6 +443,53 @@
   gap: 6px;
 }
 
+.rc-conversation {
+  display: grid;
+  max-height: 220px;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rc-message {
+  max-width: 92%;
+  padding: 9px 11px;
+  border: 1px solid #dce8f6;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #183b66;
+  font-size: 12px;
+}
+
+.rc-message p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rc-message small {
+  display: block;
+  margin-top: 5px;
+  color: #7890aa;
+  font-size: 10px;
+}
+
+.rc-message.is-user {
+  justify-self: end;
+  border-color: #bcd7ff;
+  background: #2f80ff;
+  color: #fff;
+}
+
+.rc-message.is-user small {
+  color: rgb(255 255 255 / 72%);
+}
+
+.rc-message.is-warning {
+  border-left: 3px solid #f59e0b;
+  background: #fffaf1;
+  color: #6f4600;
+}
+
 .rc-composer-box {
   min-height: 70px;
   gap: 10px;
