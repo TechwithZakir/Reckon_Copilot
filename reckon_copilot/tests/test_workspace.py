@@ -24,6 +24,19 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("Copilot Knowledge Vector Index", links)
         self.assertIn("Copilot User Preference", links)
 
+    def test_reckon_copilot_workspace_is_administrator_only(self):
+        path = (
+            Path(__file__).resolve().parents[1]
+            / "reckon_copilot"
+            / "workspace"
+            / "reckon_copilot"
+            / "reckon_copilot.json"
+        )
+        workspace = json.loads(path.read_text())
+
+        self.assertEqual(workspace["for_user"], "Administrator")
+        self.assertEqual(workspace["public"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

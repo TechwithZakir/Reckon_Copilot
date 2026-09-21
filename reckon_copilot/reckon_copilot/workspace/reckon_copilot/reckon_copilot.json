@@ -5,7 +5,7 @@
   "custom_blocks": [],
   "doc_view": "List",
   "doctype": "Workspace",
-  "for_user": "",
+  "for_user": "Administrator",
   "hide_custom": 0,
   "icon": "sparkles",
   "idx": 0,
@@ -89,7 +89,7 @@
   "number_cards": [],
   "owner": "Administrator",
   "parent_page": "",
-  "public": 1,
+  "public": 0,
   "quick_lists": [],
   "roles": [
     {
