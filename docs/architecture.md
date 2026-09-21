@@ -37,3 +37,9 @@ Supported source types are `ERP_DATABASE`, `INTERNAL_DOCUMENT`, `WEB_URL`, `MANU
 The baseline retriever uses deterministic keyword scoring and Frappe-compatible storage shapes. A provider-neutral `VectorStore` interface is also introduced with upsert, delete, similarity search, rebuild and health operations. The current implementation is native/in-memory for tests and local operation; a dedicated vector database can be added later behind the same interface without changing RAG callers.
 
 Retrieved content is always treated as untrusted data. RAG orchestration returns compact evidence objects with source attribution instead of whole documents.
+
+## Phase 5 Permission Safe Caching
+
+Phase 5 adds cache primitives for expensive Copilot operations. Cache keys include site, capability, context fingerprint, permission-scope hash, question hash, provider/model and prompt/data versions. This prevents reuse across incompatible users, roles, companies or provider/prompt versions.
+
+The cache manager is compatible with Frappe/Redis through a backend adapter and uses a deterministic in-memory backend for unit tests. Single-flight request deduplication ensures concurrent equivalent cache misses compute once when possible. Cache failures degrade to direct computation so ERPNext remains usable if Redis is unavailable.
