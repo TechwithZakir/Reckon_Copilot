@@ -31,7 +31,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(expected.issubset(links))
         self.assertTrue(expected.issubset(shortcuts))
 
-    def test_reckon_copilot_workspace_is_administrator_only(self):
+    def test_reckon_copilot_workspace_is_system_manager_only(self):
         path = (
             Path(__file__).resolve().parents[1]
             / "reckon_copilot"
@@ -41,8 +41,9 @@ class WorkspaceTests(unittest.TestCase):
         )
         workspace = json.loads(path.read_text())
 
-        self.assertEqual(workspace["for_user"], "Administrator")
-        self.assertEqual(workspace["public"], 0)
+        self.assertEqual(workspace["for_user"], "")
+        self.assertEqual(workspace["public"], 1)
+        self.assertEqual(workspace["roles"], [{"role": "System Manager"}])
 
 
 if __name__ == "__main__":
