@@ -26,7 +26,13 @@ def _whitelist(**kwargs: Any):
 
         return decorator
 
-    return frappe.whitelist(**kwargs)
+    whitelist = getattr(frappe, "whitelist", None)
+    if not callable(whitelist):
+        def decorator(fn):
+            return fn
+
+        return decorator
+    return whitelist(**kwargs)
 
 
 @_whitelist(allow_guest=False)
@@ -36,3 +42,14 @@ def get_shell_config(page_type: str | None = None) -> dict[str, Any]:
         "preferences": get_preferences(),
         "suggested_prompts": PROMPTS[normalized_type],
     }
+
+
+def can_access_copilot_app() -> bool:
+    try:
+        import frappe  # type: ignore
+    except Exception:
+        return False
+    user = getattr(frappe.session, "user", "Guest")
+    if user == "Administrator":
+        return True
+    return "System Manager" in set(frappe.get_roles(user) or [])

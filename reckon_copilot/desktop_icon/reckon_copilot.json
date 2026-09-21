@@ -1,0 +1,17 @@
+{
+  "doctype": "Desktop Icon",
+  "name": "Reckon Copilot",
+  "label": "Reckon Copilot",
+  "app": "reckon_copilot",
+  "standard": 1,
+  "icon_type": "Link",
+  "link_type": "Workspace Sidebar",
+  "link_to": "Reckon Copilot",
+  "icon": "sparkles",
+  "hidden": 0,
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}
