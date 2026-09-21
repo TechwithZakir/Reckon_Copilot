@@ -73,6 +73,9 @@ class PermissionAdapter(Protocol):
     def has_workspace_permission(self, workspace_name: str, user: str) -> bool:
         ...
 
+    def workspace_exists(self, workspace_name: str) -> bool:
+        ...
+
     def has_dashboard_permission(self, dashboard_name: str, user: str) -> bool:
         ...
 
@@ -169,6 +172,9 @@ class FrappePermissionAdapter:
             )
         )
 
+    def workspace_exists(self, workspace_name: str) -> bool:
+        return bool(self.frappe.db.exists("Workspace", workspace_name))
+
     def has_dashboard_permission(self, dashboard_name: str, user: str) -> bool:
         if not self.frappe.db.exists("Dashboard", dashboard_name):
             return False
@@ -259,6 +265,9 @@ class StaticPermissionAdapter:
         return report_name in self.reports
 
     def has_workspace_permission(self, workspace_name: str, user: str) -> bool:
+        return workspace_name in self.workspaces
+
+    def workspace_exists(self, workspace_name: str) -> bool:
         return workspace_name in self.workspaces
 
     def has_dashboard_permission(self, dashboard_name: str, user: str) -> bool:
@@ -353,6 +362,8 @@ class CopilotPermissionBoundary:
 
         if page_type == "Workspace":
             workspace_name = context.get("workspace_name")
+            if workspace_name and not self.adapter.workspace_exists(workspace_name):
+                return
             if workspace_name and not self.adapter.has_workspace_permission(workspace_name, user):
                 raise PermissionDenied("No access to requested workspace")
             return

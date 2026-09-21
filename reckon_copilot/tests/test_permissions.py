@@ -140,6 +140,37 @@ class PermissionBoundaryTests(unittest.TestCase):
                 capability=CAPABILITY_CALL_PROVIDER,
             )
 
+    def test_missing_workspace_route_is_allowed_as_module_context(self):
+        boundary = CopilotPermissionBoundary(StaticPermissionAdapter())
+
+        authorized = boundary.authorize(
+            {
+                "page_type": "Workspace",
+                "workspace_name": "Copilot Knowledge Ingestion Job",
+                "filters": {},
+            }
+        )
+
+        self.assertEqual(authorized.context["workspace_name"], "Copilot Knowledge Ingestion Job")
+
+    def test_existing_workspace_without_permission_is_denied(self):
+        boundary = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                workspaces={"Restricted Workspace"},
+            )
+        )
+        boundary.adapter.workspaces = {"Restricted Workspace"}
+        boundary.adapter.has_workspace_permission = lambda workspace_name, user: False
+
+        with self.assertRaises(PermissionDenied):
+            boundary.authorize(
+                {
+                    "page_type": "Workspace",
+                    "workspace_name": "Restricted Workspace",
+                    "filters": {},
+                }
+            )
+
     def test_provider_capability_cannot_side_channel_restricted_document(self):
         boundary = CopilotPermissionBoundary(
             StaticPermissionAdapter(
