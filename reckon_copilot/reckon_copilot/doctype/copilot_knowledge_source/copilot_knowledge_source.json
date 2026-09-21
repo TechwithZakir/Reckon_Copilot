@@ -4,8 +4,9 @@
   "creation": "2026-09-21 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
-  "field_order": ["source_type", "title", "origin", "status", "version", "content_hash", "language", "company", "module", "reference_doctype", "owner_user", "last_processed_at", "last_error", "metadata_json"],
+  "field_order": ["source_id", "source_type", "title", "origin", "status", "version", "content_hash", "language", "company", "module", "reference_doctype", "owner_user", "last_processed_at", "last_error", "metadata_json"],
   "fields": [
+    {"fieldname": "source_id", "fieldtype": "Data", "label": "Source ID", "reqd": 1, "unique": 1},
     {"fieldname": "source_type", "fieldtype": "Select", "label": "Source Type", "options": "ERP_DATABASE\nINTERNAL_DOCUMENT\nWEB_URL\nMANUAL_URL\nPDF\nDOCX\nMANUAL_TEXT", "reqd": 1},
     {"fieldname": "title", "fieldtype": "Data", "label": "Title", "reqd": 1},
     {"fieldname": "origin", "fieldtype": "Small Text", "label": "Origin"},

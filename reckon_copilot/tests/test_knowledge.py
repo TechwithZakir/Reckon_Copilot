@@ -9,7 +9,7 @@ from reckon_copilot.knowledge.embedder import EmbeddingProfile, HashingEmbedder
 from reckon_copilot.knowledge.extractor import ExtractionError
 from reckon_copilot.knowledge.models import KnowledgeSourceType, KnowledgeStatus, PermissionScope
 from reckon_copilot.knowledge.rag import RagOrchestrator
-from reckon_copilot.knowledge.repository import InMemoryKnowledgeRepository
+from reckon_copilot.knowledge.repository import FrappeKnowledgeRepository, InMemoryKnowledgeRepository
 from reckon_copilot.knowledge.retriever import KnowledgeRetriever, RetrievalRequest
 from reckon_copilot.knowledge.service import KnowledgeEngine
 from reckon_copilot.knowledge.vector_store import InMemoryVectorStore, VectorRecord
@@ -239,8 +239,82 @@ class KnowledgeEngineTests(unittest.TestCase):
         self.assertIn("chunk_id", prompt_evidence[0])
         self.assertLessEqual(len(prompt_evidence[0]["text"]), 500)
 
+    def test_frappe_repository_round_trips_stable_ids(self):
+        frappe = FakeFrappe()
+        repository = FrappeKnowledgeRepository(frappe)
+        engine = KnowledgeEngine(repository=repository)
+
+        source = engine.create_source(
+            KnowledgeSourceType.MANUAL_TEXT,
+            "Frappe Stored SOP",
+            description="Payment reminder policy",
+            permission_scope=PermissionScope(doctype="Sales Invoice"),
+        )
+        document, chunks = engine.process_source(source.source_id, payload=source.description, approve=True)
+
+        self.assertEqual(repository.get_source(source.source_id).source_id, source.source_id)
+        self.assertEqual(repository.document(document.document_id).document_id, document.document_id)
+        self.assertEqual(repository.chunks()[0].chunk_id, chunks[0].chunk_id)
+        self.assertEqual(
+            repository.source(source.source_id).permission_scope.doctype,
+            "Sales Invoice",
+        )
+
     def _retriever(self):
         return KnowledgeRetriever(self.repository, embedder=HashingEmbedder())
+
+
+class FakeDoc:
+    def __init__(self, frappe, values):
+        self._frappe = frappe
+        for key, value in values.items():
+            setattr(self, key, value)
+        self.name = values.get("name") or f"{values['doctype']}-{len(frappe.docs.get(values['doctype'], {})) + 1}"
+
+    def update(self, values):
+        for key, value in values.items():
+            setattr(self, key, value)
+
+    def insert(self, ignore_permissions=False):
+        self._frappe.docs.setdefault(self.doctype, {})[self.name] = self
+        return self
+
+    def save(self, ignore_permissions=False):
+        self._frappe.docs.setdefault(self.doctype, {})[self.name] = self
+        return self
+
+
+class FakeDb:
+    def __init__(self, frappe):
+        self.frappe = frappe
+
+    def get_value(self, doctype, filters, fieldname):
+        for name, doc in self.frappe.docs.get(doctype, {}).items():
+            if all(getattr(doc, key, None) == value for key, value in filters.items()):
+                return getattr(doc, fieldname, name)
+        return None
+
+
+class FakeFrappe:
+    def __init__(self):
+        self.docs = {}
+        self.db = FakeDb(self)
+
+    def get_doc(self, doctype_or_values, name=None):
+        if isinstance(doctype_or_values, dict):
+            return FakeDoc(self, doctype_or_values)
+        return self.docs[doctype_or_values][name]
+
+    def get_all(self, doctype, filters=None, fields=None, limit_page_length=None):
+        rows = []
+        for name, doc in self.docs.get(doctype, {}).items():
+            if filters and any(getattr(doc, key, None) != value for key, value in filters.items()):
+                continue
+            row = {}
+            for field in fields or ["name"]:
+                row[field] = getattr(doc, field, name if field == "name" else None)
+            rows.append(row)
+        return rows
 
 
 if __name__ == "__main__":

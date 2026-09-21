@@ -4,6 +4,8 @@ import unittest
 
 from reckon_copilot.api.ask import answer_from_evidence, ask_with_services
 from reckon_copilot.cache.manager import CacheManager, InMemoryCacheBackend
+from reckon_copilot.knowledge.models import Evidence
+from reckon_copilot.knowledge.rag import RagContext
 from reckon_copilot.permissions.boundary import StaticPermissionAdapter
 from reckon_copilot.providers.base import AIProvider, ProviderDisabled, ProviderRequest, ProviderResponse, ProviderResponseError, ProviderTimeout
 from reckon_copilot.providers.manager import ProviderConfig, ProviderManager
@@ -38,6 +40,16 @@ class FakeTransport:
     def generate(self, base_url, payload, timeout_seconds):
         self.calls.append((base_url, payload, timeout_seconds))
         return self.payload
+
+
+class FakeRag:
+    def __init__(self, evidence):
+        self.evidence = evidence
+        self.calls = 0
+
+    def build_context(self, question, context, user, top_k=5):
+        self.calls += 1
+        return RagContext(question=question, evidence=self.evidence)
 
 
 class ProviderPhaseTests(unittest.TestCase):
@@ -126,6 +138,41 @@ class ProviderPhaseTests(unittest.TestCase):
 
         self.assertIsNotNone(payload)
         self.assertEqual(payload.source, "knowledge")
+
+    def test_ask_auto_retrieves_rag_evidence_before_llm(self):
+        provider = FakeProvider()
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"local_llm": provider})
+        adapter = StaticPermissionAdapter(doctype_permissions={("Item", "read"): True})
+        rag = FakeRag(
+            [
+                Evidence(
+                    chunk_id="c1",
+                    document_id="d1",
+                    source_id="s1",
+                    source_title="Stock SOP",
+                    source_type="MANUAL_TEXT",
+                    locator="manual",
+                    version="1",
+                    score=1,
+                    text="Stock reorder uses reorder levels.",
+                    metadata={"untrusted": True},
+                )
+            ]
+        )
+
+        result = ask_with_services(
+            question="What is stock reorder?",
+            context={"page_type": "List", "doctype": "Item", "filters": {}},
+            evidence=[],
+            provider_manager=manager,
+            permission_adapter=adapter,
+            rag=rag,
+            user="user@example.com",
+        )
+
+        self.assertEqual(result.payload.source, "knowledge")
+        self.assertEqual(provider.calls, 0)
+        self.assertEqual(rag.calls, 1)
 
     def test_context_question_reaches_provider_after_cache_rules_and_knowledge(self):
         provider = FakeProvider()

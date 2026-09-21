@@ -7,7 +7,17 @@ from reckon_copilot.cache.keys import build_cache_identity, build_cache_key
 from reckon_copilot.cache.manager import CacheManager, FrappeCacheBackend
 from reckon_copilot.cache.ttl import ttl_for
 from reckon_copilot.context.builders import build_context
-from reckon_copilot.permissions.boundary import CAPABILITY_CALL_PROVIDER, PermissionAdapter, PermissionDenied, authorize_context
+from reckon_copilot.knowledge.rag import RagOrchestrator
+from reckon_copilot.knowledge.repository import FrappeKnowledgeRepository
+from reckon_copilot.knowledge.retriever import KnowledgeRetriever
+from reckon_copilot.permissions.boundary import (
+    CAPABILITY_CALL_PROVIDER,
+    CopilotPermissionBoundary,
+    FrappePermissionAdapter,
+    PermissionAdapter,
+    PermissionDenied,
+    authorize_context,
+)
 from reckon_copilot.providers.base import ProviderDisabled, ProviderRequest, ProviderResponseError, ProviderTimeout
 from reckon_copilot.providers.manager import ProviderConfig, ProviderManager, provider_manager_from_frappe
 from reckon_copilot.providers.prompts import PROMPT_VERSION, build_compact_prompt
@@ -46,6 +56,7 @@ def ask_with_services(
     cache_manager: CacheManager | None = None,
     usage_logger: InMemoryUsageLogger | FrappeUsageLogger | None = None,
     permission_adapter: PermissionAdapter | None = None,
+    rag: RagOrchestrator | None = None,
     site: str = "default",
 ) -> AskResult:
     question = (question or "").strip()
@@ -59,6 +70,8 @@ def ask_with_services(
         adapter=permission_adapter,
     ).context
     evidence = evidence or []
+    if not evidence and rag:
+        evidence = rag.build_context(question, authorized, user or "user@example.com").as_prompt_context()
     logger = usage_logger or InMemoryUsageLogger()
     config = provider_manager.config
     prompt = build_compact_prompt(question, authorized, evidence)
@@ -219,9 +232,18 @@ if frappe:
                 question=question,
                 context=context_payload,
                 evidence=evidence_payload,
+                user=getattr(frappe.session, "user", None),
                 provider_manager=provider_manager_from_frappe(frappe),
                 cache_manager=CacheManager(FrappeCacheBackend(frappe)),
                 usage_logger=FrappeUsageLogger(frappe),
+                rag=RagOrchestrator(
+                    KnowledgeRetriever(
+                        FrappeKnowledgeRepository(frappe),
+                        permission_boundary=CopilotPermissionBoundary(FrappePermissionAdapter(frappe)),
+                    ),
+                    cache_manager=CacheManager(FrappeCacheBackend(frappe)),
+                    site=_frappe_site(frappe),
+                ),
                 site=_frappe_site(frappe),
             )
             return result.as_dict()
