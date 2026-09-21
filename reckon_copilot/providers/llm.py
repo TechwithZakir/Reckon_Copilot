@@ -18,13 +18,13 @@ from reckon_copilot.providers.base import (
 )
 
 
-class OllamaTransport(Protocol):
+class LLMTransport(Protocol):
     def generate(self, base_url: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
         ...
 
 
 @dataclass(frozen=True)
-class OllamaProviderConfig:
+class LLMProviderConfig:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
     model: str | None = None
@@ -32,7 +32,7 @@ class OllamaProviderConfig:
     retries: int = 1
 
 
-class UrlLibOllamaTransport:
+class UrlLibLLMTransport:
     def generate(self, base_url: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
         request = urllib.request.Request(
@@ -45,28 +45,28 @@ class UrlLibOllamaTransport:
             with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
                 return json.loads(response.read().decode("utf-8"))
         except (TimeoutError, socket.timeout) as error:
-            raise ProviderTimeout("Ollama request timed out") from error
+            raise ProviderTimeout("LLM request timed out") from error
         except urllib.error.URLError as error:
             if isinstance(error.reason, socket.timeout):
-                raise ProviderTimeout("Ollama request timed out") from error
-            raise ProviderResponseError(f"Ollama request failed: {error.reason}") from error
+                raise ProviderTimeout("LLM request timed out") from error
+            raise ProviderResponseError(f"LLM request failed: {error.reason}") from error
         except json.JSONDecodeError as error:
-            raise ProviderResponseError("Ollama returned invalid JSON") from error
+            raise ProviderResponseError("LLM provider returned invalid JSON") from error
 
 
-class OllamaProvider(AIProvider):
-    provider_name = "ollama"
+class LocalLLMProvider(AIProvider):
+    provider_name = "local_llm"
 
-    def __init__(self, config: OllamaProviderConfig, transport: OllamaTransport | None = None):
+    def __init__(self, config: LLMProviderConfig, transport: LLMTransport | None = None):
         self.config = config
-        self.transport = transport or UrlLibOllamaTransport()
+        self.transport = transport or UrlLibLLMTransport()
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         if not self.config.enabled:
-            raise ProviderDisabled("Ollama provider is disabled")
+            raise ProviderDisabled("LLM provider is disabled")
         model = request.model or self.config.model
         if not model:
-            raise ProviderDisabled("Ollama model is not configured")
+            raise ProviderDisabled("LLM model is not configured")
 
         payload = {
             "model": model,
@@ -84,7 +84,7 @@ class OllamaProvider(AIProvider):
                 raw = self.transport.generate(self.config.base_url, payload, timeout)
                 text = str(raw.get("response") or "").strip()
                 if not text:
-                    raise ProviderResponseError("Ollama response was empty")
+                    raise ProviderResponseError("LLM response was empty")
                 return ProviderResponse(
                     text=text,
                     provider=self.provider_name,
@@ -101,4 +101,4 @@ class OllamaProvider(AIProvider):
                 raise
             except ProviderResponseError as error:
                 last_error = error
-        raise ProviderResponseError(str(last_error or "Ollama response failed validation"))
+        raise ProviderResponseError(str(last_error or "LLM response failed validation"))

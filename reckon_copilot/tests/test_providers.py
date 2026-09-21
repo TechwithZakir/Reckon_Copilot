@@ -7,14 +7,14 @@ from reckon_copilot.cache.manager import CacheManager, InMemoryCacheBackend
 from reckon_copilot.permissions.boundary import StaticPermissionAdapter
 from reckon_copilot.providers.base import AIProvider, ProviderDisabled, ProviderRequest, ProviderResponse, ProviderResponseError, ProviderTimeout
 from reckon_copilot.providers.manager import ProviderConfig, ProviderManager
-from reckon_copilot.providers.ollama import OllamaProvider, OllamaProviderConfig
+from reckon_copilot.providers.llm import LocalLLMProvider, LLMProviderConfig
 from reckon_copilot.providers.prompts import build_compact_prompt, compact_context, compact_evidence
 from reckon_copilot.providers.schemas import parse_answer_payload
 from reckon_copilot.providers.usage import InMemoryUsageLogger
 
 
 class FakeProvider(AIProvider):
-    provider_name = "ollama"
+    provider_name = "local_llm"
 
     def __init__(self, text='{"answer":"ok","confidence":"high","evidence_ids":["c1"]}', error=None):
         self.text = text
@@ -27,7 +27,7 @@ class FakeProvider(AIProvider):
         self.requests.append(request)
         if self.error:
             raise self.error
-        return ProviderResponse(text=self.text, provider="ollama", model=request.model, latency_ms=25)
+        return ProviderResponse(text=self.text, provider="local_llm", model=request.model, latency_ms=25)
 
 
 class FakeTransport:
@@ -41,10 +41,10 @@ class FakeTransport:
 
 
 class ProviderPhaseTests(unittest.TestCase):
-    def test_ollama_uses_configured_model_and_transport(self):
+    def test_llm_uses_configured_model_and_transport(self):
         transport = FakeTransport({"response": '{"answer":"hello"}', "model": "llama3.1"})
-        provider = OllamaProvider(
-            OllamaProviderConfig(enabled=True, model="llama3.1", base_url="http://ollama.test"),
+        provider = LocalLLMProvider(
+            LLMProviderConfig(enabled=True, model="llama3.1", base_url="http://local_llm.test"),
             transport=transport,
         )
 
@@ -54,8 +54,8 @@ class ProviderPhaseTests(unittest.TestCase):
         self.assertEqual(transport.calls[0][1]["model"], "llama3.1")
         self.assertEqual(transport.calls[0][1]["format"], "json")
 
-    def test_ollama_can_be_disabled(self):
-        provider = OllamaProvider(OllamaProviderConfig(enabled=False, model="llama3.1"), transport=FakeTransport({}))
+    def test_llm_can_be_disabled(self):
+        provider = LocalLLMProvider(LLMProviderConfig(enabled=False, model="llama3.1"), transport=FakeTransport({}))
 
         with self.assertRaises(ProviderDisabled):
             provider.complete(ProviderRequest(prompt="Hi"))
@@ -87,7 +87,7 @@ class ProviderPhaseTests(unittest.TestCase):
         provider = FakeProvider()
         manager = ProviderManager(
             ProviderConfig(enabled=True, model="local-model"),
-            providers={"ollama": provider},
+            providers={"local_llm": provider},
         )
         cache = CacheManager(InMemoryCacheBackend())
         adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
@@ -109,7 +109,7 @@ class ProviderPhaseTests(unittest.TestCase):
 
     def test_timeout_is_reported_without_retry_blocking(self):
         provider = FakeProvider(error=ProviderTimeout("slow"))
-        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"ollama": provider})
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"local_llm": provider})
         adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
 
         with self.assertRaises(ProviderTimeout):
@@ -129,7 +129,7 @@ class ProviderPhaseTests(unittest.TestCase):
 
     def test_context_question_reaches_provider_after_cache_rules_and_knowledge(self):
         provider = FakeProvider()
-        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"ollama": provider})
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"local_llm": provider})
         adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
 
         result = ask_with_services(
@@ -146,7 +146,7 @@ class ProviderPhaseTests(unittest.TestCase):
 
     def test_usage_metrics_recorded(self):
         provider = FakeProvider()
-        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"ollama": provider})
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"local_llm": provider})
         adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
         logger = InMemoryUsageLogger()
 

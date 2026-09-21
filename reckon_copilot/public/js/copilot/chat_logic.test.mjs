@@ -6,15 +6,15 @@ import { canAsk, normalizeAskResponse } from "./chat_logic.mjs";
 test("normal ask response becomes assistant message", () => {
   const message = normalizeAskResponse({
     ok: true,
-    answer: { answer: "Use the payment reminder.", confidence: "high", source: "ollama" },
+    answer: { answer: "Use the payment reminder.", confidence: "high", source: "local_llm" },
     cache_hit: true,
-    provider: "ollama",
+    provider: "local_llm",
     model: "llama",
   });
 
   assert.equal(message.text, "Use the payment reminder.");
   assert.equal(message.meta.cacheHit, true);
-  assert.equal(message.meta.provider, "ollama");
+  assert.equal(message.meta.provider, "local_llm");
 });
 
 test("permission response stays inside copilot as warning", () => {

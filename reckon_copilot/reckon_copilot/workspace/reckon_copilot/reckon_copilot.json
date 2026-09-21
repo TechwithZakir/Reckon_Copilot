@@ -82,7 +82,7 @@
       "type": "Link"
     },
     {
-      "description": "Configure local Ollama provider settings.",
+      "description": "Configure local LLM provider settings.",
       "hidden": 0,
       "is_query_report": 0,
       "label": "Copilot Provider",

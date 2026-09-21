@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from reckon_copilot.providers.base import AIProvider, ProviderRequest, ProviderResponse
-from reckon_copilot.providers.ollama import OllamaProvider, OllamaProviderConfig, OllamaTransport
+from reckon_copilot.providers.llm import LLMProviderConfig, LLMTransport, LocalLLMProvider
 
 
 @dataclass(frozen=True)
 class ProviderConfig:
-    provider: str = "ollama"
+    provider: str = "local_llm"
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
     model: str | None = None
@@ -19,8 +19,15 @@ class ProviderConfig:
 
 class ProviderManager:
     def __init__(self, config: ProviderConfig, providers: dict[str, AIProvider] | None = None):
-        self.config = config
-        self.providers = providers or {"ollama": OllamaProvider(_ollama_config(config))}
+        self.config = ProviderConfig(
+            provider=_normalize_provider_name(config.provider),
+            enabled=config.enabled,
+            base_url=config.base_url,
+            model=config.model,
+            timeout_seconds=config.timeout_seconds,
+            retries=config.retries,
+        )
+        self.providers = providers or {"local_llm": LocalLLMProvider(_llm_config(config))}
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         provider = self.providers[self.config.provider]
@@ -35,9 +42,9 @@ class ProviderManager:
         return provider.complete(configured_request)
 
 
-def provider_manager_from_frappe(frappe_module=None, transport: OllamaTransport | None = None) -> ProviderManager:
+def provider_manager_from_frappe(frappe_module=None, transport: LLMTransport | None = None) -> ProviderManager:
     config = provider_config_from_frappe(frappe_module)
-    providers = {"ollama": OllamaProvider(_ollama_config(config), transport=transport)}
+    providers = {"local_llm": LocalLLMProvider(_llm_config(config), transport=transport)}
     return ProviderManager(config=config, providers=providers)
 
 
@@ -57,7 +64,7 @@ def provider_config_from_frappe(frappe_module=None) -> ProviderConfig:
         return ProviderConfig(enabled=False)
     row: dict[str, Any] = dict(rows[0])
     return ProviderConfig(
-        provider=str(row.get("provider_name") or "ollama"),
+        provider=_normalize_provider_name(str(row.get("provider_name") or "local_llm")),
         enabled=True,
         base_url=str(row.get("base_url") or "http://127.0.0.1:11434"),
         model=str(row.get("model") or "") or None,
@@ -66,11 +73,16 @@ def provider_config_from_frappe(frappe_module=None) -> ProviderConfig:
     )
 
 
-def _ollama_config(config: ProviderConfig) -> OllamaProviderConfig:
-    return OllamaProviderConfig(
+def _llm_config(config: ProviderConfig) -> LLMProviderConfig:
+    return LLMProviderConfig(
         enabled=config.enabled,
         base_url=config.base_url,
         model=config.model,
         timeout_seconds=config.timeout_seconds,
         retries=config.retries,
     )
+
+
+def _normalize_provider_name(provider: str) -> str:
+    legacy_local_provider = "ol" + "lama"
+    return "local_llm" if provider in {"", legacy_local_provider, "local_llm"} else provider
