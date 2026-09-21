@@ -1,0 +1,167 @@
+from __future__ import annotations
+
+import unittest
+
+from reckon_copilot.api.ask import answer_from_evidence, ask_with_services
+from reckon_copilot.cache.manager import CacheManager, InMemoryCacheBackend
+from reckon_copilot.permissions.boundary import StaticPermissionAdapter
+from reckon_copilot.providers.base import AIProvider, ProviderDisabled, ProviderRequest, ProviderResponse, ProviderResponseError, ProviderTimeout
+from reckon_copilot.providers.manager import ProviderConfig, ProviderManager
+from reckon_copilot.providers.ollama import OllamaProvider, OllamaProviderConfig
+from reckon_copilot.providers.prompts import build_compact_prompt, compact_context, compact_evidence
+from reckon_copilot.providers.schemas import parse_answer_payload
+from reckon_copilot.providers.usage import InMemoryUsageLogger
+
+
+class FakeProvider(AIProvider):
+    provider_name = "ollama"
+
+    def __init__(self, text='{"answer":"ok","confidence":"high","evidence_ids":["c1"]}', error=None):
+        self.text = text
+        self.error = error
+        self.calls = 0
+        self.requests: list[ProviderRequest] = []
+
+    def complete(self, request: ProviderRequest) -> ProviderResponse:
+        self.calls += 1
+        self.requests.append(request)
+        if self.error:
+            raise self.error
+        return ProviderResponse(text=self.text, provider="ollama", model=request.model, latency_ms=25)
+
+
+class FakeTransport:
+    def __init__(self, payload):
+        self.payload = payload
+        self.calls = []
+
+    def generate(self, base_url, payload, timeout_seconds):
+        self.calls.append((base_url, payload, timeout_seconds))
+        return self.payload
+
+
+class ProviderPhaseTests(unittest.TestCase):
+    def test_ollama_uses_configured_model_and_transport(self):
+        transport = FakeTransport({"response": '{"answer":"hello"}', "model": "llama3.1"})
+        provider = OllamaProvider(
+            OllamaProviderConfig(enabled=True, model="llama3.1", base_url="http://ollama.test"),
+            transport=transport,
+        )
+
+        response = provider.complete(ProviderRequest(prompt="Hi", system_prompt="System"))
+
+        self.assertEqual(response.model, "llama3.1")
+        self.assertEqual(transport.calls[0][1]["model"], "llama3.1")
+        self.assertEqual(transport.calls[0][1]["format"], "json")
+
+    def test_ollama_can_be_disabled(self):
+        provider = OllamaProvider(OllamaProviderConfig(enabled=False, model="llama3.1"), transport=FakeTransport({}))
+
+        with self.assertRaises(ProviderDisabled):
+            provider.complete(ProviderRequest(prompt="Hi"))
+
+    def test_invalid_model_output_is_rejected(self):
+        with self.assertRaises(ProviderResponseError):
+            parse_answer_payload("not json")
+
+    def test_prompt_contains_only_compact_sanitized_context_and_evidence(self):
+        context = {
+            "page_type": "Form",
+            "doctype": "Sales Invoice",
+            "document_name": "SINV-0001",
+            "html": "<div>full document</div>",
+            "permission": {"scope_hash": "abc"},
+            "filters": {"api_secret": "hidden"},
+        }
+        evidence = [{"chunk_id": "c1", "source_id": "s1", "text": "<script>bad</script>" + ("x" * 1000)}]
+
+        bundle = build_compact_prompt("Explain this", context, evidence)
+
+        self.assertNotIn("full document", bundle.user_prompt)
+        self.assertNotIn("<script>", bundle.user_prompt)
+        self.assertIn("Sales Invoice", bundle.user_prompt)
+        self.assertLess(len(compact_evidence(evidence)[0]["text"]), 520)
+        self.assertNotIn("html", compact_context(context))
+
+    def test_cache_prevents_second_provider_call(self):
+        provider = FakeProvider()
+        manager = ProviderManager(
+            ProviderConfig(enabled=True, model="local-model"),
+            providers={"ollama": provider},
+        )
+        cache = CacheManager(InMemoryCacheBackend())
+        adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
+
+        kwargs = {
+            "question": "Why is this pending?",
+            "context": {"page_type": "List", "doctype": "Sales Order", "filters": {}},
+            "provider_manager": manager,
+            "cache_manager": cache,
+            "permission_adapter": adapter,
+            "user": "user@example.com",
+        }
+        first = ask_with_services(**kwargs)
+        second = ask_with_services(**kwargs)
+
+        self.assertFalse(first.cache_hit)
+        self.assertTrue(second.cache_hit)
+        self.assertEqual(provider.calls, 1)
+
+    def test_timeout_is_reported_without_retry_blocking(self):
+        provider = FakeProvider(error=ProviderTimeout("slow"))
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"ollama": provider})
+        adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
+
+        with self.assertRaises(ProviderTimeout):
+            ask_with_services(
+                question="Why is this pending?",
+                context={"page_type": "List", "doctype": "Sales Order", "filters": {}},
+                provider_manager=manager,
+                permission_adapter=adapter,
+                user="user@example.com",
+            )
+
+    def test_simple_knowledge_question_avoids_llm(self):
+        payload = answer_from_evidence("What is stock reorder?", [{"chunk_id": "c1", "text": "Stock reorder uses reorder levels."}])
+
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload.source, "knowledge")
+
+    def test_context_question_reaches_provider_after_cache_rules_and_knowledge(self):
+        provider = FakeProvider()
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"ollama": provider})
+        adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
+
+        result = ask_with_services(
+            question="Why is this pending?",
+            context={"page_type": "List", "doctype": "Sales Order", "filters": {}},
+            evidence=[],
+            provider_manager=manager,
+            permission_adapter=adapter,
+            user="user@example.com",
+        )
+
+        self.assertTrue(result.provider_called)
+        self.assertEqual(provider.calls, 1)
+
+    def test_usage_metrics_recorded(self):
+        provider = FakeProvider()
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local"), providers={"ollama": provider})
+        adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
+        logger = InMemoryUsageLogger()
+
+        ask_with_services(
+            question="Why is this pending?",
+            context={"page_type": "List", "doctype": "Sales Order", "filters": {}},
+            provider_manager=manager,
+            permission_adapter=adapter,
+            usage_logger=logger,
+            user="user@example.com",
+        )
+
+        self.assertEqual(logger.records[0].status, "ok")
+        self.assertGreater(logger.records[0].prompt_chars, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

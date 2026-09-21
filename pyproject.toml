@@ -34,6 +34,8 @@ packages = [
   "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_ingestion_job",
   "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_source",
   "reckon_copilot.reckon_copilot.doctype.copilot_knowledge_vector_index",
+  "reckon_copilot.reckon_copilot.doctype.copilot_provider",
+  "reckon_copilot.reckon_copilot.doctype.copilot_usage_log",
   "reckon_copilot.reckon_copilot.doctype.copilot_user_preference",
 ]
 include-package-data = true

@@ -1,0 +1,29 @@
+{
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2026-09-21 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["provider", "model", "capability", "status", "cache_hit", "latency_ms", "prompt_chars", "response_chars", "error"],
+  "fields": [
+    {"fieldname": "provider", "fieldtype": "Data", "label": "Provider"},
+    {"fieldname": "model", "fieldtype": "Data", "label": "Model"},
+    {"fieldname": "capability", "fieldtype": "Data", "label": "Capability"},
+    {"fieldname": "status", "fieldtype": "Data", "label": "Status"},
+    {"fieldname": "cache_hit", "fieldtype": "Check", "label": "Cache Hit"},
+    {"fieldname": "latency_ms", "fieldtype": "Int", "label": "Latency MS"},
+    {"fieldname": "prompt_chars", "fieldtype": "Int", "label": "Prompt Chars"},
+    {"fieldname": "response_chars", "fieldtype": "Int", "label": "Response Chars"},
+    {"fieldname": "error", "fieldtype": "Small Text", "label": "Error"}
+  ],
+  "links": [],
+  "modified": "2026-09-21 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Reckon Copilot",
+  "name": "Copilot Usage Log",
+  "owner": "Administrator",
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}

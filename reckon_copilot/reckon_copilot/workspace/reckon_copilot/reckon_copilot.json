@@ -17,7 +17,7 @@
       "hidden": 0,
       "is_query_report": 0,
       "label": "Knowledge Engine",
-      "link_count": 6,
+      "link_count": 8,
       "onboard": 0,
       "type": "Card Break"
     },
@@ -80,6 +80,26 @@
       "link_type": "DocType",
       "onboard": 0,
       "type": "Link"
+    },
+    {
+      "description": "Configure local Ollama provider settings.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Provider",
+      "link_to": "Copilot Provider",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Review provider usage, cache hits, and failures.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Usage Log",
+      "link_to": "Copilot Usage Log",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
     }
   ],
   "modified": "2026-09-21 00:00:00.000000",
@@ -122,6 +142,15 @@
       "format": "{}",
       "label": "Vector Indexes",
       "link_to": "Copilot Knowledge Vector Index",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Orange",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Providers",
+      "link_to": "Copilot Provider",
       "stats_filter": "[]",
       "type": "DocType"
     }
