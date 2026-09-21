@@ -1,0 +1,130 @@
+{
+  "charts": [],
+  "content": "[{\"id\":\"reckon_copilot_header\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reckon Copilot</span>\",\"col\":12}},{\"id\":\"knowledge_section\",\"type\":\"card\",\"data\":{\"card_name\":\"Knowledge Engine\",\"col\":4}}]",
+  "creation": "2026-09-21 00:00:00.000000",
+  "custom_blocks": [],
+  "doc_view": "List",
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "sparkles",
+  "idx": 0,
+  "indicator_color": "blue",
+  "is_hidden": 0,
+  "label": "Reckon Copilot",
+  "links": [
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Knowledge Engine",
+      "link_count": 6,
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "description": "Configure approved knowledge sources.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Knowledge Source",
+      "link_to": "Copilot Knowledge Source",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "View extracted knowledge documents.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Knowledge Document",
+      "link_to": "Copilot Knowledge Document",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Inspect indexed retrieval chunks.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Knowledge Chunk",
+      "link_to": "Copilot Knowledge Chunk",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Track background ingestion jobs.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Knowledge Ingestion Job",
+      "link_to": "Copilot Knowledge Ingestion Job",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Configure vector index metadata.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Knowledge Vector Index",
+      "link_to": "Copilot Knowledge Vector Index",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Manage user shell preferences.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot User Preference",
+      "link_to": "Copilot User Preference",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    }
+  ],
+  "modified": "2026-09-21 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Reckon Copilot",
+  "name": "Reckon Copilot",
+  "number_cards": [],
+  "owner": "Administrator",
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ],
+  "sequence_id": 1,
+  "shortcuts": [
+    {
+      "color": "Blue",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Knowledge Sources",
+      "link_to": "Copilot Knowledge Source",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Green",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Ingestion Jobs",
+      "link_to": "Copilot Knowledge Ingestion Job",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Purple",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Vector Indexes",
+      "link_to": "Copilot Knowledge Vector Index",
+      "stats_filter": "[]",
+      "type": "DocType"
+    }
+  ],
+  "title": "Reckon Copilot"
+}
