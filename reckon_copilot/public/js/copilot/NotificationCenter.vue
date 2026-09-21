@@ -1,3 +1,9 @@
+<script setup>
+defineProps({
+  contextAlert: { type: String, default: "" },
+});
+</script>
+
 <template>
   <section class="rc-block" aria-labelledby="rc-notifications-title">
     <div class="rc-block-heading">
@@ -6,6 +12,14 @@
       <button class="rc-link-button" type="button">View all</button>
     </div>
     <div class="rc-insight-list">
+      <div v-if="contextAlert" class="rc-insight-card is-warning" role="alert">
+        <span class="rc-insight-mark" aria-hidden="true">!</span>
+        <span>
+          <strong>Copilot access is limited</strong>
+          <small>{{ contextAlert }}</small>
+        </span>
+        <span class="rc-insight-arrow" aria-hidden="true">&gt;</span>
+      </div>
       <button class="rc-insight-card is-critical" type="button">
         <span class="rc-insight-mark" aria-hidden="true">!</span>
         <span>

@@ -279,9 +279,6 @@ watch(() => props.pageType, loadConfiguration);
         Loading preferences...
       </p>
       <p v-if="state.error" class="rc-error" role="status">{{ state.error }}</p>
-      <p v-if="contextAlert" class="rc-context-alert" role="alert">
-        {{ contextAlert }}
-      </p>
       <Settings
         v-if="settingsOpen"
         :preferences="state.preferences"
@@ -312,7 +309,10 @@ watch(() => props.pageType, loadConfiguration);
           </div>
         </section>
 
-        <NotificationCenter v-if="state.preferences.notifications_enabled" />
+        <NotificationCenter
+          v-if="state.preferences.notifications_enabled"
+          :context-alert="contextAlert"
+        />
 
         <section class="rc-block" aria-labelledby="rc-actions-title">
           <div class="rc-block-heading">

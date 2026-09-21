@@ -3,7 +3,25 @@ export function call(method, args = {}) {
     return Promise.reject(new Error("Frappe API is unavailable"));
   }
 
-  return window.frappe.call({ method, args }).then((response) => response.message);
+  return new Promise((resolve, reject) => {
+    window.frappe.call({
+      method,
+      args,
+      callback: (response) => resolve(response.message),
+      error: (error) => reject(normalizeFrappeError(error)),
+    });
+  });
+}
+
+function normalizeFrappeError(error) {
+  const message =
+    error?._server_messages ||
+    error?.responseJSON?._server_messages ||
+    error?.responseJSON?.exception ||
+    error?.exception ||
+    error?.message ||
+    "Request failed";
+  return new Error(String(message));
 }
 
 export function getShellConfig(pageType) {

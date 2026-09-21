@@ -619,8 +619,7 @@
 }
 
 .rc-status,
-.rc-error,
-.rc-context-alert {
+.rc-error {
   margin: 0;
   padding: 9px 16px;
   border-bottom: 1px solid #e5edf7;
@@ -634,12 +633,6 @@
 .rc-error {
   background: #fff5f5;
   color: #c92a2a;
-}
-
-.rc-context-alert {
-  border-bottom-color: #ffe5b8;
-  background: #fff8ea;
-  color: #7a4a00;
 }
 
 .rc-sr-only {

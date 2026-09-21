@@ -61,7 +61,9 @@ def get_context(
     context = _canonicalize_with_frappe(context)
     try:
         authorized = authorize_context(context)
-    except PermissionDenied as error:
+    except Exception as error:
+        if not _is_permission_denial(error):
+            raise
         context["access_denied"] = True
         context["permission"] = {
             "mode": "frappe_boundary",
@@ -74,3 +76,10 @@ def get_context(
     result = authorized.context
     result["fingerprint"] = fingerprint_context(result)
     return result
+
+
+def _is_permission_denial(error: Exception) -> bool:
+    return isinstance(error, (PermissionDenied, PermissionError)) or error.__class__.__name__ in {
+        "PermissionDenied",
+        "PermissionError",
+    }
