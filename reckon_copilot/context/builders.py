@@ -197,7 +197,7 @@ def promote_workspace_slug_to_doctype(
         return context
 
     workspace_name = context.get("workspace_name")
-    if not workspace_name or workspace_exists(workspace_name):
+    if not workspace_name:
         return context
     if not doctype_exists(workspace_name):
         return context
@@ -210,6 +210,7 @@ def promote_workspace_slug_to_doctype(
     promoted["permission"] = {
         **dict(promoted.get("permission") or {}),
         "canonicalized_from": "workspace_slug",
+        "workspace_exists": bool(workspace_exists(workspace_name)),
     }
     promoted["fingerprint"] = fingerprint_context(promoted)
     return promoted

@@ -27,6 +27,36 @@ export function slugify(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function pageTitle() {
+  const title =
+    document.querySelector(".page-title .title-text")?.textContent ||
+    document.querySelector(".page-head .title-text")?.textContent ||
+    document.querySelector(".navbar-breadcrumbs li:last-child a")?.textContent ||
+    document.querySelector(".breadcrumb-item:last-child")?.textContent ||
+    "";
+  return title.trim();
+}
+
+function visibleListViewName() {
+  const selected =
+    document.querySelector(".btn-group .btn.btn-default.ellipsis")?.textContent ||
+    document.querySelector(".standard-actions .btn-default")?.textContent ||
+    "";
+  return selected.trim();
+}
+
+function looksLikeDeskListPage(slug) {
+  if (!slug) return false;
+  if (document.querySelector(".layout-main-section .result, .list-row-container, .frappe-list")) {
+    return true;
+  }
+  if (document.querySelector(".page-actions .primary-action, .standard-actions .primary-action")) {
+    return true;
+  }
+  const title = pageTitle();
+  return Boolean(title && slugify(title) === slug);
+}
+
 export function getCanonicalRoute(rawRoute = getRoute()) {
   const deskParts = getDeskParts();
   const slug = deskParts[0] || "";
@@ -65,6 +95,10 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
   const routeType = rawRoute[0];
   if (["Form", "List", "Report", "Dashboard", "Workspace"].includes(routeType)) {
     return rawRoute;
+  }
+
+  if (deskParts.length === 1 && looksLikeDeskListPage(slug)) {
+    return ["List", pageTitle() || titleCaseSlug(slug), visibleListViewName() || "List"];
   }
 
   if (document.querySelector(".workspace, .codex-editor, .widget-group")) {
