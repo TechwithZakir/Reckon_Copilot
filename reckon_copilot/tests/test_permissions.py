@@ -30,6 +30,7 @@ class PermissionBoundaryTests(unittest.TestCase):
 
         self.assertTrue(authorized.decision.allowed)
         self.assertEqual(authorized.context["permission"]["mode"], "frappe_boundary")
+        self.assertEqual(len(authorized.context["permission"]["scope_hash"]), 64)
 
     def test_role_permission_blocks_restricted_doctype(self):
         boundary = CopilotPermissionBoundary(StaticPermissionAdapter())
@@ -139,6 +140,27 @@ class PermissionBoundaryTests(unittest.TestCase):
                 capability=CAPABILITY_CALL_PROVIDER,
             )
 
+    def test_provider_capability_cannot_side_channel_restricted_document(self):
+        boundary = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                roles={"Sales User"},
+                doctype_permissions={("Sales Invoice", "read"): True},
+                document_permissions={
+                    ("Sales Invoice", "SINV-SECRET", "read"): False,
+                },
+            )
+        )
+
+        with self.assertRaises(PermissionDenied):
+            boundary.authorize(
+                {
+                    "page_type": "Form",
+                    "doctype": "Sales Invoice",
+                    "document_name": "SINV-SECRET",
+                },
+                capability=CAPABILITY_CALL_PROVIDER,
+            )
+
     def test_write_capability_requires_system_manager(self):
         boundary = CopilotPermissionBoundary(
             StaticPermissionAdapter(
@@ -166,6 +188,50 @@ class PermissionBoundaryTests(unittest.TestCase):
                 {"page_type": "List", "doctype": "Item"},
                 capability=CAPABILITY_READ_CONTEXT,
             )
+
+    def test_permission_scope_hash_changes_when_roles_change(self):
+        context = {"page_type": "List", "doctype": "Item", "filters": {}}
+        first = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                roles={"Stock User"},
+                doctype_permissions={("Item", "read"): True},
+            )
+        ).authorize(context)
+        second = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                roles={"Stock Manager"},
+                doctype_permissions={("Item", "read"): True},
+            )
+        ).authorize(context)
+
+        self.assertNotEqual(
+            first.context["permission"]["scope_hash"],
+            second.context["permission"]["scope_hash"],
+        )
+
+    def test_permission_scope_hash_changes_when_user_permission_scope_changes(self):
+        context = {
+            "page_type": "List",
+            "doctype": "Sales Invoice",
+            "filters": {"company": "Crystal Traders"},
+        }
+        first = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                doctype_permissions={("Sales Invoice", "read"): True},
+                allowed_companies={"Crystal Traders"},
+            )
+        ).authorize(context)
+        second = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                doctype_permissions={("Sales Invoice", "read"): True},
+                allowed_companies={"Crystal Traders", "Blocked Company"},
+            )
+        ).authorize(context)
+
+        self.assertNotEqual(
+            first.context["permission"]["scope_hash"],
+            second.context["permission"]["scope_hash"],
+        )
 
 
 if __name__ == "__main__":

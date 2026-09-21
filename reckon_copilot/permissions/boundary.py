@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -202,6 +204,20 @@ class FrappePermissionAdapter:
         )
         return bool(allowed)
 
+    def permission_scope_fragments(self, context: dict[str, Any], user: str) -> dict[str, Any]:
+        fragments: dict[str, Any] = {}
+        try:
+            company_permissions = self.frappe.get_all(
+                "User Permission",
+                filters={"user": user, "allow": "Company"},
+                pluck="for_value",
+            )
+        except Exception:
+            company_permissions = []
+        if company_permissions:
+            fragments["allowed_companies"] = sorted(str(value) for value in company_permissions)
+        return fragments
+
 
 @dataclass
 class StaticPermissionAdapter:
@@ -259,6 +275,12 @@ class StaticPermissionAdapter:
         company = filters.get("company") or filters.get("Company")
         return not company or company in self.allowed_companies
 
+    def permission_scope_fragments(self, context: dict[str, Any], user: str) -> dict[str, Any]:
+        fragments: dict[str, Any] = {}
+        if self.allowed_companies is not None:
+            fragments["allowed_companies"] = sorted(self.allowed_companies)
+        return fragments
+
 
 class CopilotPermissionBoundary:
     def __init__(self, adapter: PermissionAdapter):
@@ -282,6 +304,7 @@ class CopilotPermissionBoundary:
             "enforcement": "phase_3",
             "capability": capability,
             "user": user,
+            "scope_hash": self.permission_scope_hash(redacted, capability, user),
             "redacted_fields": list(fields),
         }
         return AuthorizedContext(
@@ -372,6 +395,32 @@ class CopilotPermissionBoundary:
 
         return redacted, tuple(sorted(set(redacted_fields)))
 
+    def permission_scope_hash(
+        self,
+        context: dict[str, Any],
+        capability: str = CAPABILITY_READ_CONTEXT,
+        user: str | None = None,
+    ) -> str:
+        user = user or self.adapter.session_user()
+        page_type = context.get("page_type")
+        scope = {
+            "version": 1,
+            "user": user,
+            "roles": sorted(self.adapter.user_roles(user)),
+            "capability": capability,
+            "page_type": page_type,
+            "doctype": context.get("doctype"),
+            "report_name": context.get("report_name"),
+            "workspace_name": context.get("workspace_name"),
+            "dashboard_name": context.get("dashboard_name"),
+            "company": _filter_value(context.get("filters") or {}, "company"),
+            "document_scoped": bool(page_type == "Form" and context.get("document_name")),
+        }
+        extra_scope = getattr(self.adapter, "permission_scope_fragments", None)
+        if callable(extra_scope):
+            scope["adapter_scope"] = extra_scope(context, user)
+        return _stable_hash(scope)
+
 
 def _required(context: dict[str, Any], field: str) -> str:
     value = context.get(field)
@@ -387,6 +436,18 @@ def _is_sensitive_filter(key: Any) -> bool:
 def _is_new_document_name(value: Any) -> bool:
     text = str(value or "").strip().lower()
     return text.startswith("new-")
+
+
+def _filter_value(filters: dict[str, Any], key: str) -> Any:
+    for candidate in (key, key.title(), key.upper()):
+        if candidate in filters:
+            return filters[candidate]
+    return None
+
+
+def _stable_hash(payload: dict[str, Any]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def authorize_context(
