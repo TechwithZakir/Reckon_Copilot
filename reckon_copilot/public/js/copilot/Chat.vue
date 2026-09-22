@@ -131,7 +131,6 @@ function scrollConversationToEnd() {
 function clearConversation() {
   messages.value = [];
 }
-
 onBeforeUnmount(() => {
   for (const timer of progressTimers) window.clearInterval(timer);
   for (const timer of typingTimers) window.clearInterval(timer);

@@ -570,7 +570,6 @@
   background: linear-gradient(90deg, #2f80ff, #00b8d9, #34c759);
   transition: width 0.35s ease;
 }
-
 .rc-progress-spinner {
   width: 13px;
   height: 13px;
@@ -595,27 +594,47 @@
 }
 
 .rc-progress-stages li {
+  position: relative;
   min-height: 20px;
-  padding: 4px 7px;
+  padding: 4px 7px 4px 19px;
   border: 1px solid #dce8f6;
   border-radius: 999px;
   background: #fff;
   color: #7890aa;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
 }
 
-.rc-progress-stages li.is-active {
-  border-color: #9dc4ff;
-  background: #edf5ff;
+.rc-progress-stages li::before {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #c9d9eb;
+  border-radius: 999px;
+  background: #fff;
+  content: "";
   color: #1c5fb8;
   font-weight: 800;
+}
+
+.rc-progress-stages li.is-active::before {
+  border-color: #2f80ff;
+  background: #2f80ff;
+  box-shadow: 0 0 0 4px rgb(47 128 255 / 12%);
 }
 
 .rc-progress-stages li.is-done {
   border-color: #34c759;
   background: #f0fff6;
   color: #137d3c;
+}
+
+.rc-progress-stages li.is-done::before {
+  border-color: #34c759;
+  background: #34c759;
+}
 }
 
 @keyframes rc-spin {
