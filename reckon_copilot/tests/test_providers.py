@@ -81,6 +81,22 @@ class ProviderPhaseTests(unittest.TestCase):
         with self.assertRaises(ProviderDisabled):
             manager.complete(ProviderRequest(prompt="Hi"))
 
+    def test_frappe_style_config_without_model_does_not_raise_key_error(self):
+        class FrappeDict(dict):
+            def __getattr__(self, key):
+                if key in self:
+                    return self[key]
+                raise KeyError(key)
+
+        manager = ProviderManager(
+            FrappeDict(provider="local_llm", enabled=True),
+            providers={"local_llm": FakeProvider()},
+        )
+
+        response = manager.complete(ProviderRequest(prompt="Hi", model="local"))
+
+        self.assertEqual(response.text, '{"answer":"ok","confidence":"high","evidence_ids":["c1"]}')
+
     def test_invalid_model_output_is_rejected(self):
         with self.assertRaises(ProviderResponseError):
             parse_answer_payload("not json")

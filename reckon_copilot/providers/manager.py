@@ -20,14 +20,14 @@ class ProviderConfig:
 class ProviderManager:
     def __init__(self, config: ProviderConfig, providers: dict[str, AIProvider] | None = None):
         self.config = ProviderConfig(
-            provider=_normalize_provider_name(config.provider),
-            enabled=config.enabled,
-            base_url=config.base_url,
-            model=config.model,
-            timeout_seconds=config.timeout_seconds,
-            retries=config.retries,
+            provider=_normalize_provider_name(str(_config_value(config, "provider", "local_llm") or "local_llm")),
+            enabled=bool(_config_value(config, "enabled", False)),
+            base_url=str(_config_value(config, "base_url", "http://127.0.0.1:11434") or "http://127.0.0.1:11434"),
+            model=_config_value(config, "model", None),
+            timeout_seconds=float(_config_value(config, "timeout_seconds", 15.0) or 15.0),
+            retries=int(_config_value(config, "retries", 1) or 1),
         )
-        self.providers = providers or {"local_llm": LocalLLMProvider(_llm_config(config))}
+        self.providers = providers or {"local_llm": LocalLLMProvider(_llm_config(self.config))}
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         provider = self.providers.get(self.config.provider)
@@ -88,3 +88,12 @@ def _llm_config(config: ProviderConfig) -> LLMProviderConfig:
 def _normalize_provider_name(provider: str) -> str:
     legacy_local_provider = "ol" + "lama"
     return "local_llm" if provider in {"", legacy_local_provider, "local_llm"} else provider
+
+
+def _config_value(config: ProviderConfig | dict[str, Any], field: str, default: Any) -> Any:
+    if isinstance(config, dict):
+        return config.get(field, default)
+    try:
+        return getattr(config, field)
+    except (AttributeError, KeyError):
+        return default
