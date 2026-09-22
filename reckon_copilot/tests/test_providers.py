@@ -66,6 +66,17 @@ class ProviderPhaseTests(unittest.TestCase):
         self.assertEqual(transport.calls[0][1]["model"], "llama3.1")
         self.assertEqual(transport.calls[0][1]["format"], "json")
 
+    def test_llm_uses_configured_stream_flag(self):
+        transport = FakeTransport({"response": '{"answer":"hello"}', "model": "llama3.1"})
+        provider = LocalLLMProvider(
+            LLMProviderConfig(enabled=True, model="llama3.1", stream_response=True),
+            transport=transport,
+        )
+
+        provider.complete(ProviderRequest(prompt="Hi"))
+
+        self.assertTrue(transport.calls[0][1]["stream"])
+
     def test_llm_can_be_disabled(self):
         provider = LocalLLMProvider(LLMProviderConfig(enabled=False, model="llama3.1"), transport=FakeTransport({}))
 
@@ -96,6 +107,11 @@ class ProviderPhaseTests(unittest.TestCase):
         response = manager.complete(ProviderRequest(prompt="Hi", model="local"))
 
         self.assertEqual(response.text, '{"answer":"ok","confidence":"high","evidence_ids":["c1"]}')
+
+    def test_provider_manager_preserves_stream_response_config(self):
+        manager = ProviderManager(ProviderConfig(enabled=True, model="local", stream_response=True))
+
+        self.assertTrue(manager.config.stream_response)
 
     def test_invalid_model_output_is_rejected(self):
         with self.assertRaises(ProviderResponseError):
@@ -157,6 +173,29 @@ class ProviderPhaseTests(unittest.TestCase):
                 permission_adapter=adapter,
                 user="user@example.com",
             )
+
+    def test_timeout_log_includes_provider_diagnostics(self):
+        provider = FakeProvider(error=ProviderTimeout("slow"))
+        manager = ProviderManager(
+            ProviderConfig(enabled=True, model="local", stream_response=True, timeout_seconds=2, retries=0),
+            providers={"local_llm": provider},
+        )
+        adapter = StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True})
+        logger = InMemoryUsageLogger()
+
+        with self.assertRaises(ProviderTimeout):
+            ask_with_services(
+                question="Why is this pending?",
+                context={"page_type": "List", "doctype": "Sales Order", "filters": {}},
+                provider_manager=manager,
+                permission_adapter=adapter,
+                usage_logger=logger,
+                user="user@example.com",
+            )
+
+        self.assertEqual(logger.records[0].status, "ProviderTimeout")
+        self.assertTrue(logger.records[0].metadata["stream_response"])
+        self.assertEqual(logger.records[0].metadata["timeout_seconds"], 2)
 
     def test_simple_knowledge_question_avoids_llm(self):
         payload = answer_from_evidence("What is stock reorder?", [{"chunk_id": "c1", "text": "Stock reorder uses reorder levels."}])

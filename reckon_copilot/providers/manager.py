@@ -13,6 +13,7 @@ class ProviderConfig:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
     model: str | None = None
+    stream_response: bool = False
     timeout_seconds: float = 15.0
     retries: int = 1
 
@@ -24,6 +25,7 @@ class ProviderManager:
             enabled=bool(_config_value(config, "enabled", False)),
             base_url=str(_config_value(config, "base_url", "http://127.0.0.1:11434") or "http://127.0.0.1:11434"),
             model=_config_value(config, "model", None),
+            stream_response=bool(_config_value(config, "stream_response", False)),
             timeout_seconds=float(_config_value(config, "timeout_seconds", 15.0) or 15.0),
             retries=int(_config_value(config, "retries", 1) or 1),
         )
@@ -57,7 +59,7 @@ def provider_config_from_frappe(frappe_module=None) -> ProviderConfig:
         rows = frappe_module.get_all(
             "Copilot Provider",
             filters={"enabled": 1},
-            fields=["provider_name", "base_url", "model", "timeout_seconds", "retries"],
+            fields=["provider_name", "base_url", "model", "stream_response", "timeout_seconds", "retries"],
             limit=1,
         )
     except Exception:
@@ -70,6 +72,7 @@ def provider_config_from_frappe(frappe_module=None) -> ProviderConfig:
         enabled=True,
         base_url=str(row.get("base_url") or "http://127.0.0.1:11434"),
         model=str(row.get("model") or "") or None,
+        stream_response=bool(row.get("stream_response")),
         timeout_seconds=float(row.get("timeout_seconds") or 15),
         retries=int(row.get("retries") or 1),
     )
@@ -80,6 +83,7 @@ def _llm_config(config: ProviderConfig) -> LLMProviderConfig:
         enabled=config.enabled,
         base_url=config.base_url,
         model=config.model,
+        stream_response=config.stream_response,
         timeout_seconds=config.timeout_seconds,
         retries=config.retries,
     )

@@ -188,6 +188,14 @@ def ask_with_services(
                 cache_hit=False,
                 prompt_chars=prompt.prompt_chars,
                 error=str(error),
+                metadata={
+                    "provider": config.provider,
+                    "base_url": config.base_url,
+                    "model": config.model,
+                    "stream_response": config.stream_response,
+                    "timeout_seconds": config.timeout_seconds,
+                    "retries": config.retries,
+                },
             )
         )
         raise

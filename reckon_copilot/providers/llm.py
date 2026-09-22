@@ -28,6 +28,7 @@ class LLMProviderConfig:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
     model: str | None = None
+    stream_response: bool = False
     timeout_seconds: float = 15.0
     retries: int = 1
 
@@ -43,7 +44,10 @@ class UrlLibLLMTransport:
         )
         try:
             with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-                return json.loads(response.read().decode("utf-8"))
+                body = response.read().decode("utf-8")
+                if payload.get("stream"):
+                    return _combine_streamed_response(body)
+                return json.loads(body)
         except (TimeoutError, socket.timeout) as error:
             raise ProviderTimeout("LLM request timed out") from error
         except urllib.error.URLError as error:
@@ -72,7 +76,7 @@ class LocalLLMProvider(AIProvider):
             "model": model,
             "prompt": request.prompt,
             "system": request.system_prompt,
-            "stream": False,
+            "stream": self.config.stream_response,
             "format": "json",
         }
         timeout = request.timeout_seconds or self.config.timeout_seconds
@@ -94,6 +98,11 @@ class LocalLLMProvider(AIProvider):
                         "prompt_eval_count": raw.get("prompt_eval_count"),
                         "eval_count": raw.get("eval_count"),
                         "total_duration": raw.get("total_duration"),
+                        "load_duration": raw.get("load_duration"),
+                        "prompt_eval_duration": raw.get("prompt_eval_duration"),
+                        "eval_duration": raw.get("eval_duration"),
+                        "stream": self.config.stream_response,
+                        "base_url": self.config.base_url,
                     },
                     metadata={"done": raw.get("done", True)},
                 )
@@ -102,3 +111,22 @@ class LocalLLMProvider(AIProvider):
             except ProviderResponseError as error:
                 last_error = error
         raise ProviderResponseError(str(last_error or "LLM response failed validation"))
+
+
+def _combine_streamed_response(body: str) -> dict[str, Any]:
+    chunks = []
+    last: dict[str, Any] = {}
+    for line in body.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ProviderResponseError("LLM provider returned invalid streamed JSON") from error
+        chunks.append(str(item.get("response") or ""))
+        last.update(item)
+    if not last:
+        raise ProviderResponseError("LLM provider returned empty streamed response")
+    last["response"] = "".join(chunks)
+    return last

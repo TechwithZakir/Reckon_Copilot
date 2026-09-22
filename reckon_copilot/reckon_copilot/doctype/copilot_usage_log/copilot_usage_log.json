@@ -4,7 +4,7 @@
   "creation": "2026-09-21 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
-  "field_order": ["provider", "model", "capability", "status", "cache_hit", "latency_ms", "prompt_chars", "response_chars", "error"],
+  "field_order": ["provider", "model", "capability", "status", "cache_hit", "latency_ms", "prompt_chars", "response_chars", "error", "metadata"],
   "fields": [
     {"fieldname": "provider", "fieldtype": "Data", "label": "Provider"},
     {"fieldname": "model", "fieldtype": "Data", "label": "Model"},
@@ -14,7 +14,8 @@
     {"fieldname": "latency_ms", "fieldtype": "Int", "label": "Latency MS"},
     {"fieldname": "prompt_chars", "fieldtype": "Int", "label": "Prompt Chars"},
     {"fieldname": "response_chars", "fieldtype": "Int", "label": "Response Chars"},
-    {"fieldname": "error", "fieldtype": "Small Text", "label": "Error"}
+    {"fieldname": "error", "fieldtype": "Small Text", "label": "Error"},
+    {"fieldname": "metadata", "fieldtype": "Long Text", "label": "Metadata"}
   ],
   "links": [],
   "modified": "2026-09-21 00:00:00.000000",

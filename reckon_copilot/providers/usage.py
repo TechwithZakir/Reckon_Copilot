@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 from typing import Any
 
 
@@ -46,6 +47,7 @@ class FrappeUsageLogger:
                     "prompt_chars": record.prompt_chars,
                     "response_chars": record.response_chars,
                     "error": record.error[:500],
+                    "metadata": json.dumps(record.metadata, sort_keys=True, default=str)[:5000],
                 }
             )
             doc.insert(ignore_permissions=True)
