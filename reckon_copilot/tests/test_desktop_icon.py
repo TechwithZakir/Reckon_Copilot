@@ -25,8 +25,10 @@ class DesktopIconTests(unittest.TestCase):
         self.assertEqual(icon["label"], "Reckon Copilot")
         self.assertEqual(icon["link_type"], "Workspace Sidebar")
         self.assertEqual(icon["link_to"], "Reckon Copilot")
+        self.assertEqual(icon["icon"], "/assets/reckon_copilot/images/reckon_copilot.png")
         self.assertEqual(icon["hidden"], 0)
         self.assertEqual(icon["roles"], [{"role": "System Manager"}])
+        self.assertTrue((Path(__file__).resolve().parents[1] / "public" / "images" / "reckon_copilot.png").exists())
 
     def test_workspace_sidebar_lists_all_copilot_doctypes(self):
         path = Path(__file__).resolve().parents[1] / "workspace_sidebar" / "reckon_copilot.json"

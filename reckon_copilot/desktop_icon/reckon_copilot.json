@@ -7,7 +7,7 @@
   "icon_type": "Link",
   "link_type": "Workspace Sidebar",
   "link_to": "Reckon Copilot",
-  "icon": "sparkles",
+  "icon": "/assets/reckon_copilot/images/reckon_copilot.png",
   "hidden": 0,
   "roles": [
     {

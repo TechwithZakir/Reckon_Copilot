@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 LABEL = "Reckon Copilot"
+ICON_PATH = "/assets/reckon_copilot/images/reckon_copilot.png"
 
 
 def execute():
@@ -30,7 +31,7 @@ def _sync_desktop_icon(frappe):
         "link_type": "Workspace Sidebar" if sidebar_exists else "Route",
         "link_to": LABEL if sidebar_exists else None,
         "link": None if sidebar_exists else "/desk/reckon-copilot",
-        "icon": "sparkles",
+        "icon": ICON_PATH,
         "hidden": 0,
         "restrict_removal": 1,
         "parent_icon": None,
