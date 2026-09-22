@@ -24,6 +24,35 @@ function normalizeFrappeError(error) {
   return new Error(String(message));
 }
 
+async function callSilent(method, args = {}) {
+  const body = new URLSearchParams();
+  for (const [key, value] of Object.entries(args)) {
+    body.append(key, typeof value === "string" ? value : JSON.stringify(value));
+  }
+  const response = await fetch(`/api/method/${method}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Frappe-CSRF-Token": window.frappe?.csrf_token || "",
+      Accept: "application/json",
+    },
+    body,
+    credentials: "same-origin",
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.exc || payload.exception) {
+    throw normalizeFrappeError({
+      responseJSON: payload,
+      message: payload.message,
+    });
+  }
+  return payload.message;
+}
+
+function isMissingMethodError(error) {
+  return /has no attribute 'ask_stream'|Failed to get method.*ask_stream|ask_stream/i.test(String(error?.message || error));
+}
+
 export function getShellConfig(pageType) {
   return call("reckon_copilot.api.shell.get_shell_config", { page_type: pageType });
 }
@@ -62,12 +91,26 @@ export function askCopilotStream({ requestId, question, context, evidence = [], 
     }
   };
   realtime.on(eventName, handler);
-  return call("reckon_copilot.api.ask.ask_stream", {
+  return callSilent("reckon_copilot.api.ask.ask_stream", {
     request_id: requestId,
     question,
     context,
     evidence,
-  }).finally(() => {
-    realtime.off(eventName, handler);
-  });
+  })
+    .catch((error) => {
+      if (isMissingMethodError(error)) {
+        onEvent?.({
+          request_id: requestId,
+          event: "stage",
+          stage: "Composing response",
+          percent: 65,
+          provider: "LLM provider",
+        });
+        return askCopilot(question, context, evidence);
+      }
+      throw error;
+    })
+    .finally(() => {
+      realtime.off(eventName, handler);
+    });
 }
