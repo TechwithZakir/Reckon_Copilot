@@ -32,6 +32,8 @@ def _sync_desktop_icon(frappe):
         "link_to": LABEL if sidebar_exists else None,
         "link": None if sidebar_exists else "/desk/reckon-copilot",
         "icon": ICON_PATH,
+        "logo_url": ICON_PATH,
+        "icon_image": ICON_PATH,
         "hidden": 0,
         "restrict_removal": 1,
         "parent_icon": None,

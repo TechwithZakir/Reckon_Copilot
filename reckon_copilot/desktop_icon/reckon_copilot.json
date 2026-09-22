@@ -8,6 +8,8 @@
   "link_type": "Workspace Sidebar",
   "link_to": "Reckon Copilot",
   "icon": "/assets/reckon_copilot/images/reckon_copilot.png",
+  "logo_url": "/assets/reckon_copilot/images/reckon_copilot.png",
+  "icon_image": "/assets/reckon_copilot/images/reckon_copilot.png",
   "hidden": 0,
   "roles": [
     {
