@@ -467,10 +467,124 @@
 }
 
 .rc-message small {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
   margin-top: 5px;
   color: #7890aa;
   font-size: 10px;
+}
+
+.rc-message small span {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border: 1px solid #d8e7f8;
+  border-radius: 999px;
+  background: #fff;
+  color: #547090;
+}
+
+.rc-progress-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid #dce8f6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.rc-progress-card.is-complete {
+  background: #f7fbff;
+}
+
+.rc-progress-line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: #183b66;
+}
+
+.rc-progress-line strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-progress-line em {
+  color: #7890aa;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.rc-progress-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid #cfe2ff;
+  border-top-color: #2f80ff;
+  border-radius: 999px;
+  animation: rc-spin 0.75s linear infinite;
+}
+
+.rc-progress-card.is-complete .rc-progress-spinner {
+  border-color: #34c759;
+  animation: none;
+}
+
+.rc-progress-stages {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rc-progress-stages li {
+  position: relative;
+  min-height: 18px;
+  padding-left: 19px;
+  color: #7890aa;
+  font-size: 11px;
+}
+
+.rc-progress-stages li::before {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #c9d9eb;
+  border-radius: 999px;
+  background: #fff;
+  content: "";
+}
+
+.rc-progress-stages li.is-active {
+  color: #1c5fb8;
+  font-weight: 800;
+}
+
+.rc-progress-stages li.is-active::before {
+  border-color: #2f80ff;
+  background: #2f80ff;
+  box-shadow: 0 0 0 4px rgb(47 128 255 / 12%);
+}
+
+.rc-progress-stages li.is-done {
+  color: #315f9a;
+}
+
+.rc-progress-stages li.is-done::before {
+  border-color: #34c759;
+  background: #34c759;
+}
+
+@keyframes rc-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .rc-evidence-list,

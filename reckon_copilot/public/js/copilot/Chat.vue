@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 import { askCopilot } from "./api";
 import { canAsk, normalizeAskResponse } from "./chat_logic.mjs";
@@ -11,6 +11,16 @@ const props = defineProps({
 const draft = ref(props.initialPrompt);
 const messages = ref([]);
 const isSending = ref(false);
+const progressTimers = new Set();
+const typingTimers = new Set();
+
+const progressStages = [
+  "Reading page context",
+  "Checking permissions",
+  "Searching approved knowledge",
+  "Contacting LLM provider",
+  "Composing response",
+];
 
 watch(() => props.initialPrompt, (value) => {
   draft.value = value;
@@ -20,13 +30,16 @@ async function send() {
   const question = draft.value.trim();
   if (!canAsk(question, props.routeContext) || isSending.value) return;
   messages.value.push({ role: "user", text: question, tone: "normal" });
+  const assistantMessage = createProgressMessage();
+  messages.value.push(assistantMessage);
+  startProgress(assistantMessage);
   draft.value = "";
   isSending.value = true;
   try {
     const response = await askCopilot(question, props.routeContext);
-    messages.value.push(normalizeAskResponse(response));
+    finishProgress(assistantMessage, normalizeAskResponse(response));
   } catch (error) {
-    messages.value.push({
+    finishProgress(assistantMessage, {
       role: "assistant",
       tone: "warning",
       text: error?.message || "Copilot could not answer right now.",
@@ -35,6 +48,86 @@ async function send() {
     isSending.value = false;
   }
 }
+
+function createProgressMessage() {
+  return {
+    role: "assistant",
+    tone: "normal",
+    text: "",
+    progress: {
+      active: true,
+      stageIndex: 0,
+      stages: progressStages,
+      startedAt: Date.now(),
+      elapsed: "0s",
+    },
+    meta: {
+      provider: "LLM provider",
+      stream: true,
+    },
+  };
+}
+
+function startProgress(message) {
+  let tick = 0;
+  const timer = window.setInterval(() => {
+    if (!message.progress?.active) {
+      window.clearInterval(timer);
+      progressTimers.delete(timer);
+      return;
+    }
+    tick += 1;
+    message.progress.elapsed = `${Math.max(1, Math.round((Date.now() - message.progress.startedAt) / 1000))}s`;
+    if (tick % 3 === 0 && message.progress.stageIndex < message.progress.stages.length - 1) {
+      message.progress.stageIndex += 1;
+    }
+  }, 1000);
+  progressTimers.add(timer);
+}
+
+function finishProgress(message, normalized) {
+  message.tone = normalized.tone || "normal";
+  message.meta = {
+    ...(normalized.meta || {}),
+    stream: true,
+  };
+  message.progress = {
+    ...(message.progress || {}),
+    active: false,
+    stageIndex: progressStages.length - 1,
+    elapsed: message.progress?.elapsed || "0s",
+  };
+  typeAnswer(message, normalized.text || "");
+}
+
+function typeAnswer(message, text) {
+  message.text = "";
+  if (!text) return;
+  let index = 0;
+  const step = Math.max(3, Math.ceil(text.length / 80));
+  const timer = window.setInterval(() => {
+    index = Math.min(text.length, index + step);
+    message.text = text.slice(0, index);
+    if (index >= text.length) {
+      window.clearInterval(timer);
+      typingTimers.delete(timer);
+      nextTick(scrollConversationToEnd);
+    }
+  }, 18);
+  typingTimers.add(timer);
+}
+
+function scrollConversationToEnd() {
+  const el = document.querySelector(".rc-conversation");
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+onBeforeUnmount(() => {
+  for (const timer of progressTimers) window.clearInterval(timer);
+  for (const timer of typingTimers) window.clearInterval(timer);
+  progressTimers.clear();
+  typingTimers.clear();
+});
 </script>
 
 <template>
@@ -48,9 +141,30 @@ async function send() {
         :class="[`is-${message.role}`, { 'is-warning': message.tone === 'warning' }]"
       >
         <p>{{ message.text }}</p>
+        <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
+          <div class="rc-progress-line">
+            <span class="rc-progress-spinner" aria-hidden="true"></span>
+            <strong>{{ message.progress.stages[message.progress.stageIndex] }}</strong>
+            <em>{{ message.progress.elapsed }}</em>
+          </div>
+          <ol class="rc-progress-stages">
+            <li
+              v-for="(stage, stageIndex) in message.progress.stages"
+              :key="stage"
+              :class="{
+                'is-done': stageIndex < message.progress.stageIndex || !message.progress.active,
+                'is-active': stageIndex === message.progress.stageIndex && message.progress.active,
+              }"
+            >
+              {{ stage }}
+            </li>
+          </ol>
+        </div>
         <small v-if="message.meta">
           {{ message.meta.intent || message.meta.source || message.meta.provider || "copilot" }}
           <span v-if="message.meta.cacheHit">cached</span>
+          <span v-if="message.meta.model">Model: {{ message.meta.model }}</span>
+          <span v-if="message.meta.stream">Stream-style UI</span>
         </small>
         <div v-if="message.meta?.evidence?.length" class="rc-evidence-list" aria-label="Evidence">
           <span
