@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from reckon_copilot.providers.base import AIProvider, ProviderRequest, ProviderResponse
+from reckon_copilot.providers.base import AIProvider, ProviderDisabled, ProviderRequest, ProviderResponse
 from reckon_copilot.providers.llm import LLMProviderConfig, LLMTransport, LocalLLMProvider
 
 
@@ -30,7 +30,9 @@ class ProviderManager:
         self.providers = providers or {"local_llm": LocalLLMProvider(_llm_config(config))}
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
-        provider = self.providers[self.config.provider]
+        provider = self.providers.get(self.config.provider)
+        if not provider:
+            raise ProviderDisabled(f"LLM provider is not configured: {self.config.provider}")
         configured_request = ProviderRequest(
             prompt=request.prompt,
             system_prompt=request.system_prompt,

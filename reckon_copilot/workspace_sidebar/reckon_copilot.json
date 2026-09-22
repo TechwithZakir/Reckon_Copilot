@@ -1,0 +1,133 @@
+{
+  "app": "reckon_copilot",
+  "doctype": "Workspace Sidebar",
+  "header_icon": "sparkles",
+  "items": [
+    {
+      "child": 0,
+      "collapsible": 1,
+      "icon": "home",
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Home",
+      "link_to": "Reckon Copilot",
+      "link_type": "Workspace",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 0,
+      "collapsible": 1,
+      "icon": "database",
+      "indent": 1,
+      "keep_closed": 0,
+      "label": "Knowledge",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Section Break"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Knowledge Source",
+      "link_to": "Copilot Knowledge Source",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Knowledge Document",
+      "link_to": "Copilot Knowledge Document",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Knowledge Chunk",
+      "link_to": "Copilot Knowledge Chunk",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Knowledge Ingestion Job",
+      "link_to": "Copilot Knowledge Ingestion Job",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Knowledge Vector Index",
+      "link_to": "Copilot Knowledge Vector Index",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 0,
+      "collapsible": 1,
+      "icon": "settings",
+      "indent": 1,
+      "keep_closed": 0,
+      "label": "Settings",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Section Break"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Provider",
+      "link_to": "Copilot Provider",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot Usage Log",
+      "link_to": "Copilot Usage Log",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    },
+    {
+      "child": 1,
+      "collapsible": 1,
+      "indent": 0,
+      "keep_closed": 0,
+      "label": "Copilot User Preference",
+      "link_to": "Copilot User Preference",
+      "link_type": "DocType",
+      "show_arrow": 0,
+      "type": "Link"
+    }
+  ],
+  "module": "Reckon Copilot",
+  "name": "Reckon Copilot",
+  "standard": 1,
+  "title": "Reckon Copilot"
+}

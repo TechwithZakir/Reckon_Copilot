@@ -285,3 +285,9 @@ if frappe:
             return {"ok": False, "access_denied": True, "message": str(error)}
         except (ProviderDisabled, ProviderTimeout, ProviderResponseError) as error:
             return {"ok": False, "provider_error": True, "message": str(error)}
+        except Exception:
+            return {
+                "ok": False,
+                "provider_error": True,
+                "message": "Copilot could not answer this request. Please check provider configuration and try again.",
+            }

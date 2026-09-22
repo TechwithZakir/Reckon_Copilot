@@ -72,6 +72,15 @@ class ProviderPhaseTests(unittest.TestCase):
         with self.assertRaises(ProviderDisabled):
             provider.complete(ProviderRequest(prompt="Hi"))
 
+    def test_unknown_provider_key_raises_provider_disabled_not_key_error(self):
+        manager = ProviderManager(
+            ProviderConfig(provider="missing_provider", enabled=True, model="local"),
+            providers={"local_llm": FakeProvider()},
+        )
+
+        with self.assertRaises(ProviderDisabled):
+            manager.complete(ProviderRequest(prompt="Hi"))
+
     def test_invalid_model_output_is_rejected(self):
         with self.assertRaises(ProviderResponseError):
             parse_answer_payload("not json")
