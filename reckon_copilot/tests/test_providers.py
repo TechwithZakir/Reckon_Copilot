@@ -41,6 +41,11 @@ class FakeTransport:
         self.calls.append((base_url, payload, timeout_seconds))
         return self.payload
 
+    def stream(self, base_url, payload, timeout_seconds):
+        self.calls.append((base_url, payload, timeout_seconds))
+        yield {"response": '{"answer":"hel', "model": payload["model"]}
+        yield {"response": 'lo"}', "model": payload["model"], "done": True}
+
 
 class FakeRag:
     def __init__(self, evidence):
@@ -75,6 +80,20 @@ class ProviderPhaseTests(unittest.TestCase):
 
         provider.complete(ProviderRequest(prompt="Hi"))
 
+        self.assertTrue(transport.calls[0][1]["stream"])
+
+    def test_llm_stream_emits_tokens_before_final_response(self):
+        transport = FakeTransport({})
+        provider = LocalLLMProvider(
+            LLMProviderConfig(enabled=True, model="llama3.1", stream_response=True),
+            transport=transport,
+        )
+        tokens = []
+
+        response = provider.complete_stream(ProviderRequest(prompt="Hi"), on_token=tokens.append)
+
+        self.assertEqual(tokens, ['{"answer":"hel', 'lo"}'])
+        self.assertEqual(response.text, '{"answer":"hello"}')
         self.assertTrue(transport.calls[0][1]["stream"])
 
     def test_llm_can_be_disabled(self):

@@ -45,6 +45,26 @@ class ProviderManager:
         )
         return provider.complete(configured_request)
 
+    def complete_stream(self, request: ProviderRequest, on_token=None) -> ProviderResponse:
+        provider = self.providers.get(self.config.provider)
+        if not provider:
+            raise ProviderDisabled(f"LLM provider is not configured: {self.config.provider}")
+        configured_request = ProviderRequest(
+            prompt=request.prompt,
+            system_prompt=request.system_prompt,
+            capability=request.capability,
+            context=request.context,
+            model=request.model or self.config.model,
+            timeout_seconds=request.timeout_seconds or self.config.timeout_seconds,
+        )
+        stream_method = getattr(provider, "complete_stream", None)
+        if callable(stream_method):
+            return stream_method(configured_request, on_token=on_token)
+        response = provider.complete(configured_request)
+        if on_token:
+            on_token(response.text)
+        return response
+
 
 def provider_manager_from_frappe(frappe_module=None, transport: LLMTransport | None = None) -> ProviderManager:
     config = provider_config_from_frappe(frappe_module)

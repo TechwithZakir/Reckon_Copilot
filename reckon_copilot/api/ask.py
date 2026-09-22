@@ -255,6 +255,15 @@ except Exception:  # pragma: no cover
 
 if frappe:
 
+    STREAM_EVENT = "reckon_copilot_stream"
+
+    def _stream_publish(request_id: str, event: str, payload: dict[str, Any] | None = None):
+        frappe.publish_realtime(
+            STREAM_EVENT,
+            {"request_id": request_id, "event": event, **(payload or {})},
+            user=getattr(frappe.session, "user", None),
+        )
+
     @frappe.whitelist()
     def ask(question: str, route=None, filters=None, page_type: str | None = None, context=None, evidence=None):
         import json
@@ -299,3 +308,137 @@ if frappe:
                 "provider_error": True,
                 "message": "Copilot could not answer this request. Please check provider configuration and try again.",
             }
+
+    @frappe.whitelist()
+    def ask_stream(request_id: str, question: str, route=None, filters=None, page_type: str | None = None, context=None, evidence=None):
+        import json
+
+        try:
+            context_payload = context
+            if isinstance(context_payload, str):
+                context_payload = json.loads(context_payload)
+            if not isinstance(context_payload, dict):
+                context_payload = build_context(route=route, filters=filters, page_type=page_type)
+            evidence_payload = evidence
+            if isinstance(evidence_payload, str):
+                evidence_payload = json.loads(evidence_payload)
+            if not isinstance(evidence_payload, list):
+                evidence_payload = []
+
+            _stream_publish(request_id, "stage", {"stage": "Reading page context", "percent": 10})
+            user = getattr(frappe.session, "user", None)
+            provider_manager = provider_manager_from_frappe(frappe)
+            logger = FrappeUsageLogger(frappe)
+            authorized = authorize_context(
+                context_payload,
+                capability=CAPABILITY_CALL_PROVIDER,
+                user=user,
+                adapter=FrappePermissionAdapter(frappe),
+            ).context
+
+            _stream_publish(request_id, "stage", {"stage": "Checking permissions", "percent": 24})
+            intent = classify_intent(question)
+            if not evidence_payload:
+                _stream_publish(request_id, "stage", {"stage": "Searching approved knowledge", "percent": 38})
+                evidence_payload = RagOrchestrator(
+                    KnowledgeRetriever(
+                        FrappeKnowledgeRepository(frappe),
+                        permission_boundary=CopilotPermissionBoundary(FrappePermissionAdapter(frappe)),
+                    ),
+                    cache_manager=CacheManager(FrappeCacheBackend(frappe)),
+                    site=_frappe_site(frappe),
+                ).build_context(question, authorized, user or "user@example.com").as_prompt_context()
+
+            prompt = build_compact_prompt(question, authorized, evidence_payload, intent=intent)
+            deterministic = answer_from_evidence(question, evidence_payload)
+            if deterministic:
+                result = AskResult(
+                    payload=deterministic,
+                    provider="knowledge",
+                    model="rules",
+                    intent=intent,
+                    evidence=tuple(_compact_evidence_meta(evidence_payload, deterministic.evidence_ids)),
+                )
+                _stream_publish(request_id, "token", {"text": deterministic.answer})
+                _stream_publish(request_id, "done", {"result": result.as_dict(), "percent": 100})
+                return result.as_dict()
+
+            config = provider_manager.config
+            _stream_publish(
+                request_id,
+                "stage",
+                {
+                    "stage": "Contacting LLM provider",
+                    "percent": 55,
+                    "provider": config.provider,
+                    "model": config.model,
+                    "stream": config.stream_response,
+                },
+            )
+            streamed_chars = 0
+
+            def on_token(token: str):
+                nonlocal streamed_chars
+                streamed_chars += len(token)
+                _stream_publish(
+                    request_id,
+                    "token",
+                    {
+                        "text": token,
+                        "percent": min(92, 58 + streamed_chars // 40),
+                    },
+                )
+
+            response = provider_manager.complete_stream(
+                ProviderRequest(
+                    prompt=prompt.user_prompt,
+                    system_prompt=prompt.system_prompt,
+                    capability=CAPABILITY_CALL_PROVIDER,
+                    context=authorized,
+                    model=config.model,
+                    timeout_seconds=config.timeout_seconds,
+                ),
+                on_token=on_token,
+            )
+            _stream_publish(request_id, "stage", {"stage": "Composing response", "percent": 94})
+            payload = parse_answer_payload(response.text, source=response.provider)
+            logger.log(
+                UsageRecord(
+                    provider=response.provider,
+                    model=response.model or "unknown",
+                    capability=CAPABILITY_CALL_PROVIDER,
+                    status="ok",
+                    cache_hit=False,
+                    latency_ms=response.latency_ms,
+                    prompt_chars=prompt.prompt_chars,
+                    response_chars=len(payload.answer),
+                    metadata=dict(response.usage),
+                )
+            )
+            result = AskResult(
+                payload=payload,
+                provider_called=True,
+                provider=response.provider,
+                model=response.model or "unknown",
+                latency_ms=response.latency_ms,
+                intent=intent,
+                evidence=tuple(_compact_evidence_meta(evidence_payload, payload.evidence_ids)),
+            )
+            _stream_publish(request_id, "done", {"result": result.as_dict(), "percent": 100})
+            return result.as_dict()
+        except PermissionDenied as error:
+            response = {"ok": False, "access_denied": True, "message": str(error)}
+            _stream_publish(request_id, "error", response)
+            return response
+        except (ProviderDisabled, ProviderTimeout, ProviderResponseError) as error:
+            response = {"ok": False, "provider_error": True, "message": str(error)}
+            _stream_publish(request_id, "error", response)
+            return response
+        except Exception:
+            response = {
+                "ok": False,
+                "provider_error": True,
+                "message": "Copilot could not answer this request. Please check provider configuration and try again.",
+            }
+            _stream_publish(request_id, "error", response)
+            return response

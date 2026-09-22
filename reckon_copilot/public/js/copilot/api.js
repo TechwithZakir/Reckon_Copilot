@@ -47,3 +47,27 @@ export function askCopilot(question, context, evidence = []) {
     evidence,
   });
 }
+
+export function askCopilotStream({ requestId, question, context, evidence = [], onEvent }) {
+  const realtime = window.frappe?.realtime;
+  const canStream = realtime && typeof realtime.on === "function" && typeof realtime.off === "function";
+  if (!canStream) {
+    return askCopilot(question, context, evidence);
+  }
+
+  const eventName = "reckon_copilot_stream";
+  const handler = (event) => {
+    if (event?.request_id === requestId) {
+      onEvent?.(event);
+    }
+  };
+  realtime.on(eventName, handler);
+  return call("reckon_copilot.api.ask.ask_stream", {
+    request_id: requestId,
+    question,
+    context,
+    evidence,
+  }).finally(() => {
+    realtime.off(eventName, handler);
+  });
+}

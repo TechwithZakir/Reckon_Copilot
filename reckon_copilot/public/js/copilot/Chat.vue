@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
-import { askCopilot } from "./api";
+import { askCopilotStream } from "./api";
 import { canAsk, normalizeAskResponse } from "./chat_logic.mjs";
 
 const props = defineProps({
@@ -33,17 +33,29 @@ async function send() {
   const assistantMessage = createProgressMessage();
   messages.value.push(assistantMessage);
   startProgress(assistantMessage);
+  const requestId = createRequestId();
   draft.value = "";
   isSending.value = true;
   try {
-    const response = await askCopilot(question, props.routeContext);
-    finishProgress(assistantMessage, normalizeAskResponse(response));
-  } catch (error) {
-    finishProgress(assistantMessage, {
-      role: "assistant",
-      tone: "warning",
-      text: error?.message || "Copilot could not answer right now.",
+    const response = await askCopilotStream({
+      requestId,
+      question,
+      context: props.routeContext,
+      onEvent: (event) => applyStreamEvent(assistantMessage, event),
     });
+    if (!assistantMessage.streamDone) {
+      finishProgress(assistantMessage, normalizeAskResponse(response), { reveal: true });
+    }
+  } catch (error) {
+    finishProgress(
+      assistantMessage,
+      {
+        role: "assistant",
+        tone: "warning",
+        text: error?.message || "Copilot could not answer right now.",
+      },
+      { reveal: true },
+    );
   } finally {
     isSending.value = false;
   }
@@ -66,6 +78,7 @@ function createProgressMessage() {
       provider: "LLM provider",
       stream: true,
     },
+    streamDone: false,
   };
 }
 
@@ -79,9 +92,6 @@ function startProgress(message) {
     }
     tick += 1;
     message.progress.elapsed = `${Math.max(1, Math.round((Date.now() - message.progress.startedAt) / 1000))}s`;
-    if (tick % 3 === 0 && message.progress.stageIndex < message.progress.stages.length - 1) {
-      message.progress.stageIndex += 1;
-    }
     const stageFloor = Math.round((message.progress.stageIndex / message.progress.stages.length) * 78);
     const softTick = Math.min(14, tick * 2);
     message.progress.percent = Math.min(92, Math.max(message.progress.percent, stageFloor + softTick));
@@ -90,7 +100,40 @@ function startProgress(message) {
   progressTimers.add(timer);
 }
 
-function finishProgress(message, normalized) {
+function applyStreamEvent(message, event) {
+  if (event.event === "stage") {
+    const stageIndex = progressStages.indexOf(event.stage);
+    if (stageIndex >= 0) {
+      message.progress.stageIndex = stageIndex;
+    }
+    message.progress.percent = Math.max(message.progress.percent || 0, Number(event.percent || 0));
+    message.meta = {
+      ...(message.meta || {}),
+      provider: event.provider || message.meta?.provider,
+      model: event.model || message.meta?.model,
+      stream: true,
+    };
+    nextTick(scrollConversationToEnd);
+    return;
+  }
+  if (event.event === "token") {
+    message.text = `${message.text || ""}${event.text || ""}`;
+    message.progress.percent = Math.max(message.progress.percent || 0, Number(event.percent || 0));
+    nextTick(scrollConversationToEnd);
+    return;
+  }
+  if (event.event === "done") {
+    message.streamDone = true;
+    finishProgress(message, normalizeAskResponse(event.result), { reveal: false });
+    return;
+  }
+  if (event.event === "error") {
+    message.streamDone = true;
+    finishProgress(message, normalizeAskResponse(event), { reveal: false });
+  }
+}
+
+function finishProgress(message, normalized, options = {}) {
   message.tone = normalized.tone || "normal";
   message.meta = {
     ...(normalized.meta || {}),
@@ -103,7 +146,11 @@ function finishProgress(message, normalized) {
     elapsed: message.progress?.elapsed || "0s",
     percent: 100,
   };
-  typeAnswer(message, normalized.text || "");
+  if (options.reveal) {
+    typeAnswer(message, normalized.text || "");
+  } else {
+    message.text = normalized.text || message.text || "";
+  }
 }
 
 function typeAnswer(message, text) {
@@ -131,6 +178,14 @@ function scrollConversationToEnd() {
 function clearConversation() {
   messages.value = [];
 }
+
+function createRequestId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `rc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 onBeforeUnmount(() => {
   for (const timer of progressTimers) window.clearInterval(timer);
   for (const timer of typingTimers) window.clearInterval(timer);
@@ -193,7 +248,7 @@ onBeforeUnmount(() => {
           {{ message.meta.intent || message.meta.source || message.meta.provider || "copilot" }}
           <span v-if="message.meta.cacheHit">cached</span>
           <span v-if="message.meta.model">Model: {{ message.meta.model }}</span>
-          <span v-if="message.meta.stream">Live progress</span>
+          <span v-if="message.meta.stream">Realtime stream</span>
         </small>
         <div v-if="message.meta?.evidence?.length" class="rc-evidence-list" aria-label="Evidence">
           <span
