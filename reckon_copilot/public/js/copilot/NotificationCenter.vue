@@ -2,6 +2,7 @@
 defineProps({
   contextAlert: { type: String, default: "" },
   insights: { type: Array, default: () => [] },
+  notifications: { type: Array, default: () => [] },
 });
 
 const fallbackInsights = [
@@ -35,6 +36,33 @@ function insightMark(severity) {
 </script>
 
 <template>
+  <section
+    v-if="notifications.length"
+    class="rc-block"
+    aria-labelledby="rc-alerts-title"
+  >
+    <div class="rc-block-heading">
+      <span class="rc-heading-icon" aria-hidden="true">!</span>
+      <h3 id="rc-alerts-title">Alerts</h3>
+    </div>
+    <div class="rc-insight-list">
+      <button
+        v-for="notification in notifications"
+        :key="notification.notification_id || notification.title"
+        class="rc-insight-card rc-alert-card"
+        :class="insightClass(notification.level)"
+        type="button"
+      >
+        <span class="rc-insight-mark" aria-hidden="true">{{ insightMark(notification.level) }}</span>
+        <span>
+          <strong>{{ notification.title }}</strong>
+          <small>{{ notification.message }}</small>
+        </span>
+        <span class="rc-alert-action">{{ notification.action_label || "Review" }}</span>
+      </button>
+    </div>
+  </section>
+
   <section class="rc-block" aria-labelledby="rc-notifications-title">
     <div class="rc-block-heading">
       <span class="rc-heading-icon" aria-hidden="true">!</span>

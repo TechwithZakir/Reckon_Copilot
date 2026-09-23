@@ -26,6 +26,7 @@ packages = [
   "reckon_copilot.insights",
   "reckon_copilot.jobs",
   "reckon_copilot.knowledge",
+  "reckon_copilot.notifications",
   "reckon_copilot.patches",
   "reckon_copilot.patches.v0_1",
   "reckon_copilot.permissions",

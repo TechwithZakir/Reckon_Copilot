@@ -346,6 +346,14 @@
   font-weight: 800;
 }
 
+.rc-alert-action {
+  align-self: center;
+  color: #2374e8;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .rc-insight-card.is-critical {
   border-left-color: #ef4444;
   background: #fff7f7;

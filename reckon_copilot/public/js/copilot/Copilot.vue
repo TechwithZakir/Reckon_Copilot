@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { getInsights, getShellConfig, savePreferences } from "./api";
+import { getInsights, getNotifications, getShellConfig, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ContextHeader from "./ContextHeader.vue";
 import NotificationCenter from "./NotificationCenter.vue";
@@ -20,6 +20,7 @@ const selectedPrompt = ref("");
 const settingsOpen = ref(false);
 const insights = ref([]);
 const insightCounts = ref({ critical: 1, warning: 1, info: 1 });
+const notifications = ref([]);
 
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
@@ -126,15 +127,21 @@ async function updatePreferences(preferences) {
 async function loadInsights() {
   if (!props.routeContext || props.routeContext.access_denied) {
     insights.value = [];
+    notifications.value = [];
     insightCounts.value = { critical: 0, warning: props.routeContext?.access_denied ? 1 : 0, info: 0 };
     return;
   }
   try {
-    const result = await getInsights(props.routeContext);
+    const [result, notificationResult] = await Promise.all([
+      getInsights(props.routeContext),
+      getNotifications(props.routeContext, [], state.value.preferences.notifications_enabled),
+    ]);
     insights.value = result.findings || [];
     insightCounts.value = result.counts || { critical: 0, warning: 0, info: 0 };
+    notifications.value = notificationResult.notifications || [];
   } catch (_error) {
     insights.value = [];
+    notifications.value = [];
     insightCounts.value = { critical: 0, warning: 1, info: 0 };
   }
 }
@@ -143,6 +150,7 @@ onMounted(loadConfiguration);
 onMounted(loadInsights);
 watch(() => props.pageType, loadConfiguration);
 watch(contextFingerprint, loadInsights);
+watch(() => state.value.preferences.notifications_enabled, loadInsights);
 </script>
 
 <template>
@@ -333,6 +341,7 @@ watch(contextFingerprint, loadInsights);
           v-if="state.preferences.notifications_enabled"
           :context-alert="contextAlert"
           :insights="insights"
+          :notifications="notifications"
         />
 
         <section class="rc-block" aria-labelledby="rc-actions-title">

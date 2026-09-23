@@ -16,7 +16,9 @@ Phase 6 is implemented as the local-first LLM provider path. The current impleme
 
 Phase 7 foundation is implemented as deterministic, permission-bound insights. The implementation adds a reusable `reckon_copilot.insights` responsibility area, a whitelisted insights API, structured findings with severity/source/confidence/suggested prompts, evidence compaction and visible Key Insights cards/counters in the Copilot panel.
 
-The next planned phase is Phase 8 — proactive notifications and alerts. Start Phase 8 only after the latest Phase 7 commit is pushed, deployed, migrated if needed, cache-cleared and manually verified on the target bench.
+Phase 8 foundation is implemented as proactive, permission-bound notifications and alerts. The implementation adds a reusable `reckon_copilot.notifications` responsibility area, a whitelisted notifications API, deterministic alert IDs, panel-safe permission-denied alerts and a Copilot panel Alerts section driven by warning/critical findings.
+
+The next planned phase should extend notifications into persistence, user dismissal state and optional scheduled/server-pushed alert jobs after the latest Phase 8 commit is pushed, deployed, migrated if needed, cache-cleared and manually verified on the target bench.
 
 ## Important product direction
 
@@ -105,3 +107,17 @@ Phase 7 introduced an `insights` responsibility area for deterministic rules and
 - not perform write actions
 
 The Phase 7 API is `reckon_copilot.api.insights.get_insights`. It authorizes with `analytics.run`, returns panel-safe findings, and converts permission denials into panel-friendly insight messages instead of Frappe server-error modals.
+
+## Phase 8 notification boundary
+
+Phase 8 notifications are derived from authorized Phase 7 findings. Notifications must:
+
+- use `reckon_copilot.notifications` instead of duplicating insight or permission logic
+- call the permission-bound insights service before emitting alerts
+- return compact alert objects with level, source, source id, action label and action prompt
+- never include full documents, raw report rows or unrestricted ERPNext data
+- convert permission failures into panel-safe alerts
+- respect the user `notifications_enabled` preference in the client
+- not perform write actions or scheduled pushes until persistence/dismissal rules are implemented
+
+The Phase 8 API is `reckon_copilot.api.notifications.get_notifications`.

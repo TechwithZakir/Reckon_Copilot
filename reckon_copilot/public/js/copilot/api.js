@@ -72,6 +72,14 @@ export function getInsights(context, evidence = []) {
   });
 }
 
+export function getNotifications(context, evidence = [], enabled = true) {
+  return call("reckon_copilot.api.notifications.get_notifications", {
+    context,
+    evidence,
+    enabled,
+  });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }
