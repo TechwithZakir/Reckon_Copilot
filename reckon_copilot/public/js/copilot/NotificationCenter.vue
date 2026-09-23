@@ -1,7 +1,37 @@
 <script setup>
 defineProps({
   contextAlert: { type: String, default: "" },
+  insights: { type: Array, default: () => [] },
 });
+
+const fallbackInsights = [
+  {
+    finding_id: "fallback-status",
+    title: "Review pending document status",
+    summary: "Copilot can highlight overdue, blocked or incomplete work once context extraction is enabled.",
+    severity: "critical",
+  },
+  {
+    finding_id: "fallback-linked",
+    title: "Check linked transactions",
+    summary: "Related records and permission-safe summaries are planned for the next context phase.",
+    severity: "warning",
+  },
+  {
+    finding_id: "fallback-page",
+    title: "Ask about this page",
+    summary: "Use suggested prompts to prepare for page-aware assistance without sending record data yet.",
+    severity: "info",
+  },
+];
+
+function insightClass(severity) {
+  return `is-${["critical", "warning", "info"].includes(severity) ? severity : "info"}`;
+}
+
+function insightMark(severity) {
+  return severity === "critical" ? "!" : severity === "warning" ? "+" : "i";
+}
 </script>
 
 <template>
@@ -20,27 +50,17 @@ defineProps({
         </span>
         <span class="rc-insight-arrow" aria-hidden="true">&gt;</span>
       </div>
-      <button class="rc-insight-card is-critical" type="button">
-        <span class="rc-insight-mark" aria-hidden="true">!</span>
+      <button
+        v-for="insight in insights.length ? insights : fallbackInsights"
+        :key="insight.finding_id || insight.title"
+        class="rc-insight-card"
+        :class="insightClass(insight.severity)"
+        type="button"
+      >
+        <span class="rc-insight-mark" aria-hidden="true">{{ insightMark(insight.severity) }}</span>
         <span>
-          <strong>Review pending document status</strong>
-          <small>Copilot can highlight overdue, blocked or incomplete work once context extraction is enabled.</small>
-        </span>
-        <span class="rc-insight-arrow" aria-hidden="true">&gt;</span>
-      </button>
-      <button class="rc-insight-card is-warning" type="button">
-        <span class="rc-insight-mark" aria-hidden="true">+</span>
-        <span>
-          <strong>Check linked transactions</strong>
-          <small>Related records and permission-safe summaries are planned for the next context phase.</small>
-        </span>
-        <span class="rc-insight-arrow" aria-hidden="true">&gt;</span>
-      </button>
-      <button class="rc-insight-card is-info" type="button">
-        <span class="rc-insight-mark" aria-hidden="true">i</span>
-        <span>
-          <strong>Ask about this page</strong>
-          <small>Use suggested prompts to prepare for page-aware assistance without sending record data yet.</small>
+          <strong>{{ insight.title }}</strong>
+          <small>{{ insight.summary }}</small>
         </span>
         <span class="rc-insight-arrow" aria-hidden="true">&gt;</span>
       </button>

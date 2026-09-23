@@ -65,6 +65,13 @@ export function getRouteContext(route, filters = {}, pageType = "Page") {
   });
 }
 
+export function getInsights(context, evidence = []) {
+  return call("reckon_copilot.api.insights.get_insights", {
+    context,
+    evidence,
+  });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }

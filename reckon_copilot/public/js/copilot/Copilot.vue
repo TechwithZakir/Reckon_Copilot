@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { getShellConfig, savePreferences } from "./api";
+import { getInsights, getShellConfig, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ContextHeader from "./ContextHeader.vue";
 import NotificationCenter from "./NotificationCenter.vue";
@@ -18,6 +18,8 @@ const state = ref(createShellState());
 const prompts = ref([]);
 const selectedPrompt = ref("");
 const settingsOpen = ref(false);
+const insights = ref([]);
+const insightCounts = ref({ critical: 1, warning: 1, info: 1 });
 
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
@@ -121,8 +123,26 @@ async function updatePreferences(preferences) {
   }
 }
 
+async function loadInsights() {
+  if (!props.routeContext || props.routeContext.access_denied) {
+    insights.value = [];
+    insightCounts.value = { critical: 0, warning: props.routeContext?.access_denied ? 1 : 0, info: 0 };
+    return;
+  }
+  try {
+    const result = await getInsights(props.routeContext);
+    insights.value = result.findings || [];
+    insightCounts.value = result.counts || { critical: 0, warning: 0, info: 0 };
+  } catch (_error) {
+    insights.value = [];
+    insightCounts.value = { critical: 0, warning: 1, info: 0 };
+  }
+}
+
 onMounted(loadConfiguration);
+onMounted(loadInsights);
 watch(() => props.pageType, loadConfiguration);
+watch(contextFingerprint, loadInsights);
 </script>
 
 <template>
@@ -295,15 +315,15 @@ watch(() => props.pageType, loadConfiguration);
           </div>
           <div class="rc-metric-grid" aria-label="Current insight summary">
             <div class="rc-metric is-critical">
-              <strong>1</strong>
+              <strong>{{ insightCounts.critical }}</strong>
               <span>Critical</span>
             </div>
             <div class="rc-metric is-warning">
-              <strong>1</strong>
+              <strong>{{ insightCounts.warning }}</strong>
               <span>Warning</span>
             </div>
             <div class="rc-metric is-info">
-              <strong>1</strong>
+              <strong>{{ insightCounts.info }}</strong>
               <span>Info</span>
             </div>
           </div>
@@ -312,6 +332,7 @@ watch(() => props.pageType, loadConfiguration);
         <NotificationCenter
           v-if="state.preferences.notifications_enabled"
           :context-alert="contextAlert"
+          :insights="insights"
         />
 
         <section class="rc-block" aria-labelledby="rc-actions-title">

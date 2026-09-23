@@ -14,7 +14,9 @@ Phase 5 is implemented as permission-safe caching. Cache identities include cont
 
 Phase 6 is implemented as the local-first LLM provider path. The current implementation uses configurable `Copilot Provider` records, no hard-coded model, provider usage logs, timeout/retry settings, optional `Stream Response`, detailed metadata logging and Frappe realtime streaming for token/progress events.
 
-The next planned phase is Phase 7 — Insights: rules, findings and proactive insights. Start Phase 7 only after the latest Phase 6 commits are pushed, deployed, migrated, cache-cleared and manually verified on the target bench.
+Phase 7 foundation is implemented as deterministic, permission-bound insights. The implementation adds a reusable `reckon_copilot.insights` responsibility area, a whitelisted insights API, structured findings with severity/source/confidence/suggested prompts, evidence compaction and visible Key Insights cards/counters in the Copilot panel.
+
+The next planned phase is Phase 8 — proactive notifications and alerts. Start Phase 8 only after the latest Phase 7 commit is pushed, deployed, migrated if needed, cache-cleared and manually verified on the target bench.
 
 ## Important product direction
 
@@ -93,7 +95,7 @@ The browser should subscribe before calling `ask_stream`, and must unsubscribe w
 
 ## Phase 7 starting point
 
-Phase 7 should introduce an `insights` responsibility area for deterministic rules and findings before adding proactive notification behavior. Insights must:
+Phase 7 introduced an `insights` responsibility area for deterministic rules and findings before adding proactive notification behavior. Insights must continue to:
 
 - call the permission boundary first
 - operate from canonical context and permission-safe knowledge evidence
@@ -101,3 +103,5 @@ Phase 7 should introduce an `insights` responsibility area for deterministic rul
 - return structured findings with severity, source, confidence and suggested next question/action
 - be testable without ERPNext network access
 - not perform write actions
+
+The Phase 7 API is `reckon_copilot.api.insights.get_insights`. It authorizes with `analytics.run`, returns panel-safe findings, and converts permission denials into panel-friendly insight messages instead of Frappe server-error modals.
