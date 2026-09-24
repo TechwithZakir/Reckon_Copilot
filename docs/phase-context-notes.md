@@ -147,15 +147,21 @@ the authorized page context changes, and no new write capability is introduced.
 The ranking contract is covered by advisor tests and the UI remains compatible
 with older deployments because it consumes the existing advisor response.
 
-The next catalog slice adds a reusable `AdvisorCatalog` interface with approved
-read-only templates. The default catalog contributes schema-aware Sales Order,
-Sales Invoice, Item and Purchase Order recommendations only when the resolved
-page type, actual DocType and required fields match. Every catalog result keeps
-source reference, catalog version, intent type and read-only execution mode.
-Unsafe write intents, disabled templates, missing fields and unrelated
-DocTypes are rejected before recommendations reach the panel. A future Frappe
-repository can supply administrator-managed templates through this interface
-without changing advisor callers.
+The catalog implementation is complete for this phase. It uses the reusable
+`AdvisorCatalog` interface with approved read-only templates and covers the
+document mappings in the supplied catalog across Framework, ERPNext Accounts,
+Selling, Buying, Stock, Manufacturing, Assets, Projects, CRM, POS and HRMS.
+Each supported DocType has context-specific List and Form actions/questions
+with source references, catalog versions, reasons, priorities and intent types.
+Templates are shown only when the resolved page type, actual DocType and
+required effective fields match. Unsafe write intents, disabled templates,
+missing fields and unrelated DocTypes are rejected before recommendations reach
+the panel. A future Frappe repository can supply administrator-managed
+templates through this interface without changing advisor callers.
+
+This catalog completion has no dependency on Phase 11. Phase 11 can consume
+the same read-only advisor results while adding deterministic forecasting and
+anomaly calculations; it does not need to change catalog callers.
 
 The advisor API also has a rolling-deployment compatibility fallback. If an
 older worker raises because it has not loaded `authorize_action`, the endpoint

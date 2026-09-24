@@ -183,6 +183,33 @@ class AdvisorTests(unittest.TestCase):
         with self.assertRaises(PermissionDenied):
             get_advice({"page_type": "List", "doctype": "Salary Slip"}, permission_adapter=StaticPermissionAdapter())
 
+    def test_catalog_covers_purchase_order_with_read_only_action_and_question(self):
+        result = get_advice(
+            {"page_type": "Form", "doctype": "Purchase Order", "document_name": "PO-0001"},
+            metadata={"field_names": ["items", "supplier", "schedule_date"]},
+            permission_adapter=StaticPermissionAdapter(
+                doctype_permissions={("Purchase Order", "read"): True},
+                document_permissions={("Purchase Order", "PO-0001", "read"): True},
+            ),
+        )
+
+        catalog_items = [item for item in [*result["actions"], *result["questions"]] if item["source"] == "catalog"]
+        self.assertTrue(any(item["title"] == "Review purchase order fulfilment" for item in catalog_items))
+        self.assertTrue(any(item["title"] == "What remains to receive?" for item in catalog_items))
+        self.assertTrue(all(item["intent_type"].startswith("read_only_") for item in catalog_items))
+        self.assertTrue(all(item["execution"] == "prompt" for item in catalog_items))
+
+    def test_catalog_hides_field_dependent_suggestion_when_schema_is_missing(self):
+        result = get_advice(
+            {"page_type": "List", "doctype": "Purchase Invoice"},
+            metadata={"field_names": ["supplier", "posting_date"]},
+            permission_adapter=StaticPermissionAdapter(
+                doctype_permissions={("Purchase Invoice", "read"): True},
+            ),
+        )
+
+        self.assertFalse(any(item["source"] == "catalog" for item in result["actions"] + result["questions"]))
+
 
 if __name__ == "__main__":
     unittest.main()

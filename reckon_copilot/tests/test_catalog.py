@@ -46,13 +46,11 @@ class AdvisorCatalogTests(unittest.TestCase):
             ),
             [],
         )
-        self.assertEqual(
-            catalog.questions_for(
-                {"page_type": "List", "doctype": "Purchase Order"},
-                {"field_names": ["status", "items"]},
-            ),
-            [],
+        purchase_questions = catalog.questions_for(
+            {"page_type": "List", "doctype": "Purchase Order"},
+            {"field_names": ["status", "items"]},
         )
+        self.assertTrue(any(item["title"] == "What remains to receive?" for item in purchase_questions))
 
     def test_unapproved_or_write_template_is_not_runtime_eligible(self):
         with self.assertRaises(ValueError):

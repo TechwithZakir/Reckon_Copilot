@@ -108,3 +108,20 @@ until a staging backup and rollback procedure are available.
 If migration reports a missing `copilot_action_audit` module, confirm the app
 contains both `copilot_action_audit.py` and `__init__.py` beside the DocType
 JSON, then restart the bench processes before retrying migration.
+
+## Suggested Actions Catalog Verification
+
+The catalog is complete before Phase 11 and remains read-only. Run the advisor
+tests and verify representative pages:
+
+```powershell
+python -m unittest reckon_copilot.tests.test_advisor
+```
+
+Open a permitted Purchase Order, Sales Order, Sales Invoice, Item, Work Order,
+CRM Lead, POS Profile, Employee or Leave Application List/Form. Confirm that
+Suggested Actions and Quick Questions use the current DocType, show a reason,
+priority, source and action type, and that unrelated or field-incomplete
+DocTypes do not receive catalog suggestions. Confirm every catalog suggestion
+only starts a Copilot read-only prompt; it must not create, update, submit,
+approve or delete an ERP record.
