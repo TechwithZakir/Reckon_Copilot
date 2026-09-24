@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { getAgentAdvice, getInsights, getNotifications, getShellConfig, savePreferences } from "./api";
+import { getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, savePreferences } from "./api";
 import Chat from "./Chat.vue";
+import ActionApproval from "./ActionApproval.vue";
 import ContextHeader from "./ContextHeader.vue";
 import NotificationCenter from "./NotificationCenter.vue";
 import Settings from "./Settings.vue";
@@ -25,6 +26,7 @@ const advisorQuestions = ref([]);
 const advisorActions = ref([]);
 const models = ref([]);
 const selectedModel = ref("");
+const actionPlan = ref(null);
 
 const actionPrompts = computed(() => {
   const fromAdvisor = advisorActions.value.map((item) => item.title || item.prompt).filter(Boolean);
@@ -114,6 +116,16 @@ const contextDetail = computed(() => {
 
 function dispatch(action) {
   state.value = reduceShellState(state.value, action);
+}
+
+async function requestActionPreview(action) {
+  if (props.routeContext?.page_type !== "Form") return;
+  try {
+    const result = await previewAction(props.routeContext, action);
+    if (result?.plan) actionPlan.value = result.plan;
+  } catch (error) {
+    actionPlan.value = { error: error.message || "Action preview is unavailable." };
+  }
 }
 
 async function loadConfiguration() {
@@ -386,6 +398,14 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
               <span>?</span>
               {{ prompt }}
             </button>
+            <button v-if="routeContext?.page_type === 'Form'" class="rc-action" type="button" @click="requestActionPreview('update')">
+              <span>?</span>
+              Preview an update
+            </button>
+            <button v-if="routeContext?.page_type === 'Form'" class="rc-action" type="button" @click="requestActionPreview('submit')">
+              <span>!</span>
+              Preview submission
+            </button>
           </div>
           <button class="rc-link-button rc-more-button" type="button">
             More suggestions
@@ -407,6 +427,12 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
           </label>
         </div>
       </div>
+      <ActionApproval
+        v-if="actionPlan && !actionPlan.error"
+        :plan="actionPlan"
+        @close="actionPlan = null"
+        @approve="actionPlan = null"
+      />
     </template>
   </aside>
 </template>

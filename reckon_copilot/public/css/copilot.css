@@ -771,6 +771,35 @@
   font-weight: 700;
 }
 
+.rc-action-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(16 35 63 / 24%);
+}
+
+.rc-action-dialog-card {
+  width: min(100%, 360px);
+  padding: 18px;
+  border: 1px solid #cfe0f7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgb(16 35 63 / 22%);
+}
+
+.rc-action-dialog-summary { margin: 12px 0; color: #234b76; font-weight: 700; text-transform: capitalize; }
+.rc-action-risk { padding: 9px 10px; border-radius: 8px; background: #fff4e5; color: #a15c00; font-size: 11px; }
+.rc-action-details { display: grid; grid-template-columns: 90px 1fr; gap: 7px; margin: 14px 0; font-size: 11px; }
+.rc-action-details dt { color: #7890aa; }
+.rc-action-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #234b76; font-weight: 700; }
+.rc-action-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.rc-secondary-button, .rc-primary-button { padding: 8px 12px; border-radius: 8px; font: inherit; font-size: 11px; font-weight: 700; }
+.rc-secondary-button { border: 1px solid #d6e5fa; background: #fff; color: #31577f; }
+.rc-primary-button { border: 1px solid #2f80ff; background: #2f80ff; color: #fff; }
+
 .sr-only {
   position: absolute;
   width: 1px;
