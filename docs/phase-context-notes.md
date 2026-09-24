@@ -26,6 +26,8 @@ Phase 9 will add the Contextual Agent Advisor and Safe Action Planning layer. It
 
 Phase 9 implementation has started with a permission-bound Agent Advisor API and service. It generates context-specific read-only questions and review-plan actions for List, Form, Report, Dashboard and Workspace contexts. Mutating actions are intentionally not exposed yet; future action execution must add explicit approval and audit handling.
 
+The provider contract now includes an administrator-managed `Allowed Models` allowlist. Server-side provider selection rejects any model not in that allowlist; the future Copilot selector must consume these validated options and never submit arbitrary browser model names.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.

@@ -13,6 +13,7 @@ class ProviderConfig:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
     model: str | None = None
+    allowed_models: tuple[str, ...] = ()
     stream_response: bool = False
     timeout_seconds: float = 15.0
     retries: int = 1
@@ -25,11 +26,19 @@ class ProviderManager:
             enabled=bool(_config_value(config, "enabled", False)),
             base_url=str(_config_value(config, "base_url", "http://127.0.0.1:11434") or "http://127.0.0.1:11434"),
             model=_config_value(config, "model", None),
+            allowed_models=tuple(_model_list(_config_value(config, "allowed_models", ()))),
             stream_response=bool(_config_value(config, "stream_response", False)),
             timeout_seconds=float(_config_value(config, "timeout_seconds", 15.0) or 15.0),
             retries=int(_config_value(config, "retries", 1) or 1),
         )
         self.providers = providers or {"local_llm": LocalLLMProvider(_llm_config(self.config))}
+
+    def select_model(self, requested: str | None = None) -> str | None:
+        model = str(requested or self.config.model or "").strip() or None
+        allowed = self.config.allowed_models
+        if allowed and model not in allowed:
+            raise ProviderDisabled("Requested LLM model is not enabled for this provider")
+        return model
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         provider = self.providers.get(self.config.provider)
@@ -79,7 +88,7 @@ def provider_config_from_frappe(frappe_module=None) -> ProviderConfig:
         rows = frappe_module.get_all(
             "Copilot Provider",
             filters={"enabled": 1},
-            fields=["provider_name", "base_url", "model", "stream_response", "timeout_seconds", "retries"],
+            fields=["provider_name", "base_url", "model", "allowed_models", "stream_response", "timeout_seconds", "retries"],
             limit=1,
         )
     except Exception:
@@ -92,6 +101,7 @@ def provider_config_from_frappe(frappe_module=None) -> ProviderConfig:
         enabled=True,
         base_url=str(row.get("base_url") or "http://127.0.0.1:11434"),
         model=str(row.get("model") or "") or None,
+        allowed_models=tuple(_model_list(row.get("allowed_models"))),
         stream_response=bool(row.get("stream_response")),
         timeout_seconds=float(row.get("timeout_seconds") or 15),
         retries=int(row.get("retries") or 1),
@@ -112,6 +122,14 @@ def _llm_config(config: ProviderConfig) -> LLMProviderConfig:
 def _normalize_provider_name(provider: str) -> str:
     legacy_local_provider = "ol" + "lama"
     return "local_llm" if provider in {"", legacy_local_provider, "local_llm"} else provider
+
+
+def _model_list(value: Any) -> list[str]:
+    if isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = str(value or "").replace("\n", ",").split(",")
+    return list(dict.fromkeys(str(item).strip() for item in values if str(item).strip()))
 
 
 def _config_value(config: ProviderConfig | dict[str, Any], field: str, default: Any) -> Any:

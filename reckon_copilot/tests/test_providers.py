@@ -132,6 +132,15 @@ class ProviderPhaseTests(unittest.TestCase):
 
         self.assertTrue(manager.config.stream_response)
 
+    def test_provider_manager_validates_allowlisted_models(self):
+        manager = ProviderManager(
+            ProviderConfig(model="primary", allowed_models=("primary", "fast")),
+            providers={"local_llm": FakeProvider()},
+        )
+        self.assertEqual(manager.select_model("fast"), "fast")
+        with self.assertRaises(ProviderDisabled):
+            manager.select_model("unapproved")
+
     def test_invalid_model_output_is_rejected(self):
         with self.assertRaises(ProviderResponseError):
             parse_answer_payload("not json")
