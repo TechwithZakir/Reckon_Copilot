@@ -135,6 +135,25 @@ class AdvisorTests(unittest.TestCase):
         self.assertEqual(scope_question["action_type"], "filter")
         self.assertEqual(scope_question["priority"], "high")
 
+    def test_dashboard_advice_names_real_visible_components(self):
+        result = get_advice(
+            {"page_type": "Dashboard", "dashboard_name": "Stock", "filters": {}},
+            metadata={
+                "chart_count": 1,
+                "number_card_count": 2,
+                "chart_titles": ["Stock Value by Item Group"],
+                "number_card_titles": ["Total Warehouses", "Total Stock Value"],
+                "dashboard_snapshot": {
+                    "summary": "Stock dashboard contains 2 KPI card(s) and 1 chart(s).",
+                },
+            },
+            permission_adapter=StaticPermissionAdapter(dashboards={"Stock"}),
+        )
+
+        self.assertIn("2 KPI card(s)", result["page_summary"])
+        self.assertTrue(any("Stock Value by Item Group" in item["title"] for item in result["questions"]))
+        self.assertTrue(any(item["category"] == "dashboard-summary" for item in result["questions"]))
+
     def test_restricted_context_cannot_receive_advice(self):
         with self.assertRaises(PermissionDenied):
             get_advice({"page_type": "List", "doctype": "Salary Slip"}, permission_adapter=StaticPermissionAdapter())

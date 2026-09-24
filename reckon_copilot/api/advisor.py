@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from reckon_copilot.advisor.service import get_advice
+from reckon_copilot.context.dashboard import build_dashboard_snapshot
 from reckon_copilot.permissions.boundary import (
     FrappePermissionAdapter,
     PermissionDenied,
@@ -28,22 +29,33 @@ def get_agent_advice(context: dict[str, Any] | str | None = None) -> dict[str, A
         import frappe  # type: ignore
         adapter = FrappePermissionAdapter(frappe)
         authorized = authorize_context(payload, user=frappe.session.user, adapter=adapter).context
+        dashboard_snapshot = build_dashboard_snapshot(
+            authorized,
+            frappe,
+            user=frappe.session.user,
+        )
         result = get_advice(
             authorized,
             user=frappe.session.user,
             permission_adapter=adapter,
-            metadata=_safe_page_metadata(authorized, frappe),
+            metadata=_safe_page_metadata(authorized, frappe, dashboard_snapshot=dashboard_snapshot),
         )
         return result
     except PermissionDenied as error:
         return {"ok": False, "access_denied": True, "message": str(error), "questions": [], "actions": []}
 
 
-def _safe_page_metadata(context: dict[str, Any], frappe: Any) -> dict[str, Any]:
+def _safe_page_metadata(
+    context: dict[str, Any],
+    frappe: Any,
+    *,
+    dashboard_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Read only compact structural metadata after route authorization.
 
-    No document values, report rows, chart data or workspace content crosses
-    this endpoint. This keeps the advisor useful without creating a side channel.
+    Only compact, permission-checked structural metadata and dashboard
+    aggregates cross this endpoint. Raw document values, report rows and
+    workspace content are never returned.
     """
     page_type = context.get("page_type")
     metadata: dict[str, Any] = {}
@@ -83,12 +95,26 @@ def _safe_page_metadata(context: dict[str, Any], frappe: Any) -> dict[str, Any]:
         except Exception:
             pass
     elif page_type == "Dashboard" and context.get("dashboard_name"):
-        try:
-            dashboard = frappe.get_doc("Dashboard", context["dashboard_name"])
-            metadata["card_count"] = len(getattr(dashboard, "charts", []) or []) + len(getattr(dashboard, "cards", []) or [])
-            metadata["module"] = getattr(dashboard, "module", None)
-        except Exception:
-            pass
+        snapshot = dashboard_snapshot or build_dashboard_snapshot(
+            context,
+            frappe,
+            user=getattr(getattr(frappe, "session", None), "user", None),
+        )
+        if snapshot:
+            metadata["dashboard_snapshot"] = snapshot
+            metadata["chart_count"] = len(snapshot.get("charts") or [])
+            metadata["number_card_count"] = len(snapshot.get("number_cards") or [])
+            metadata["card_count"] = metadata["chart_count"] + metadata["number_card_count"]
+            metadata["chart_titles"] = [
+                str(item.get("title") or "")[:120]
+                for item in snapshot.get("charts") or []
+                if item.get("title")
+            ][:8]
+            metadata["number_card_titles"] = [
+                str(item.get("title") or "")[:120]
+                for item in snapshot.get("number_cards") or []
+                if item.get("title")
+            ][:8]
     elif page_type == "Workspace" and context.get("workspace_name"):
         try:
             workspace = frappe.get_doc("Workspace", context["workspace_name"])

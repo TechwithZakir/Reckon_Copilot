@@ -9,6 +9,7 @@ from reckon_copilot.context.builders import (
     fingerprint_context,
     promote_workspace_slug_to_doctype,
 )
+from reckon_copilot.context.dashboard import enrich_dashboard_context
 from reckon_copilot.permissions import PermissionDenied, authorize_context
 
 
@@ -74,8 +75,24 @@ def get_context(
         context["fingerprint"] = fingerprint_context(context)
         return context
     result = authorized.context
+    result = enrich_dashboard_context(
+        result,
+        _frappe_module(),
+        user=_frappe_user(),
+    )
     result["fingerprint"] = fingerprint_context(result)
     return result
+
+
+def _frappe_module() -> Any:
+    import frappe  # type: ignore
+
+    return frappe
+
+
+def _frappe_user() -> str | None:
+    frappe = _frappe_module()
+    return getattr(getattr(frappe, "session", None), "user", None)
 
 
 def _is_permission_denial(error: Exception) -> bool:

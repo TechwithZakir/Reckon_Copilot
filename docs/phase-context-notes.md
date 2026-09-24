@@ -181,3 +181,27 @@ Phase 8 notifications are derived from authorized Phase 7 findings. Notification
 - not perform write actions or scheduled pushes until persistence/dismissal rules are implemented
 
 The Phase 8 API is `reckon_copilot.api.notifications.get_notifications`.
+
+## Phase 9 dashboard advisor update
+
+Dashboard responses must describe the page a user is looking at, not internal
+Copilot implementation metadata. The provider prompt omits boundary labels,
+capability codes, enforcement versions and scope hashes. Dashboard routes now
+receive a compact server-built snapshot containing:
+
+- the dashboard title and active filters
+- visible chart titles, source DocTypes, measures and small aggregate data points
+- visible number-card titles, source DocTypes, functions and aggregate values
+- a short dashboard summary used by the advisor and LLM prompt
+
+The snapshot supports both legacy `Dashboard` records and Frappe v16
+Workspace-backed `dashboard-view` routes. Linked chart and number-card reads
+are permission-aware, and only compact aggregates are returned. The advisor
+now generates dashboard-summary, metric-review and chart-explanation questions
+from the actual visible components instead of generic route questions.
+
+The dashboard snapshot is refreshed server-side for context, advisor and ask
+requests, and its addition changes the canonical context fingerprint. Tests
+cover prompt metadata suppression, visible dashboard component extraction,
+Workspace fallback, linked-component permission filtering and dashboard-specific
+advisor recommendations.

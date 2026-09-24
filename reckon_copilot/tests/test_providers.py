@@ -151,7 +151,12 @@ class ProviderPhaseTests(unittest.TestCase):
             "doctype": "Sales Invoice",
             "document_name": "SINV-0001",
             "html": "<div>full document</div>",
-            "permission": {"scope_hash": "abc"},
+            "permission": {
+                "scope_hash": "abc",
+                "mode": "frappe_boundary",
+                "enforcement": "phase_3",
+                "capability": "provider.call",
+            },
             "filters": {"api_secret": "hidden"},
         }
         evidence = [{"chunk_id": "c1", "source_id": "s1", "text": "<script>bad</script>" + ("x" * 1000)}]
@@ -163,6 +168,30 @@ class ProviderPhaseTests(unittest.TestCase):
         self.assertIn("Sales Invoice", bundle.user_prompt)
         self.assertLess(len(compact_evidence(evidence)[0]["text"]), 520)
         self.assertNotIn("html", compact_context(context))
+        self.assertNotIn("frappe_boundary", bundle.user_prompt)
+        self.assertNotIn("phase_3", bundle.user_prompt)
+        self.assertNotIn("provider.call", bundle.user_prompt)
+        self.assertNotIn("scope_hash", bundle.user_prompt)
+        self.assertNotIn("fingerprint", bundle.user_prompt)
+
+    def test_dashboard_prompt_keeps_visible_snapshot_but_not_permission_internals(self):
+        context = {
+            "page_type": "Dashboard",
+            "dashboard_name": "Stock",
+            "permission": {"mode": "frappe_boundary", "enforcement": "phase_3"},
+            "dashboard_snapshot": {
+                "summary": "Stock dashboard contains 2 KPI card(s) and 1 chart(s).",
+                "number_cards": [{"title": "Total Warehouses", "value": 5}],
+                "charts": [{"title": "Stock Value by Item Group", "data": {"labels": ["Raw"]}}],
+            },
+        }
+
+        bundle = build_compact_prompt("Summarize this dashboard", context)
+
+        self.assertIn("Total Warehouses", bundle.user_prompt)
+        self.assertIn("Stock Value by Item Group", bundle.user_prompt)
+        self.assertNotIn("frappe_boundary", bundle.user_prompt)
+        self.assertNotIn("phase_3", bundle.user_prompt)
 
     def test_cache_prevents_second_provider_call(self):
         provider = FakeProvider()

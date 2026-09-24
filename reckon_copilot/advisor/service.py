@@ -212,23 +212,43 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
         return result[:4]
 
     if page_type == "Dashboard":
-        card_count = metadata.get("card_count")
-        return [
+        chart_titles = metadata.get("chart_titles") or []
+        card_titles = metadata.get("number_card_titles") or []
+        components = [str(title) for title in [*card_titles, *chart_titles] if title]
+        component_hint = ", ".join(components[:4])
+        result = [
             _item(
-                f"Which {label} metrics need attention?",
-                f"Explain the visible {label} metrics and identify where an operator should look first.",
-                "metric-review",
-                f"The dashboard exposes {card_count} configured metric card(s)." if card_count else "Use the visible dashboard context without exposing underlying records.",
-                "dashboard", priority="high" if card_count else "normal", action_type="analyze",
+                f"Summarize the {label} dashboard",
+                f"Summarize every visible KPI card and chart on the {label} dashboard, including current aggregate values and what deserves attention first.",
+                "dashboard-summary",
+                metadata.get("dashboard_snapshot", {}).get("summary") or "The dashboard snapshot contains only the visible, permission-scoped aggregates.",
+                "dashboard", priority="high" if components else "normal", action_type="analyze",
             ),
             _item(
-                "What changed in this dashboard scope?",
-                "Explain how the selected dashboard or date scope affects the visible metrics.",
-                "metric-scope",
-                "Dashboard interpretation should stay aligned with the current route and filters.",
-                "context", action_type="filter",
+                f"Which {label} metric needs attention first?",
+                f"Compare the visible {label} KPI cards and charts and explain the first operational follow-up.",
+                "metric-review",
+                f"Visible dashboard components include {component_hint}." if component_hint else "No readable component names were available, so Copilot will use the current dashboard scope.",
+                "dashboard", priority="high" if components else "normal", action_type="analyze",
             ),
         ]
+        if chart_titles:
+            chart_title = str(chart_titles[0])
+            result.append(_item(
+                f"Explain {chart_title}",
+                f"Explain the {chart_title} chart, its source and what its current labels and values indicate.",
+                "chart-explanation",
+                "This question is generated from a chart currently visible on the dashboard.",
+                "dashboard", action_type="analyze",
+            ))
+        result.append(_item(
+            "How does the current dashboard scope affect these values?",
+            "Explain the active dashboard filters and how they change the visible KPI cards and charts.",
+            "metric-scope",
+            "Dashboard interpretation should stay aligned with the current route filters and aggregate scope.",
+            "filter" if _filters(context) else "context", action_type="filter",
+        ))
+        return result[:4]
 
     if page_type == "Workspace":
         link_count = metadata.get("link_count")
@@ -341,10 +361,10 @@ def _actions(
 
     if page_type == "Dashboard":
         return [_item(
-            "Prioritize dashboard signals",
-            "Summarize which visible metrics deserve attention first and why.",
-            "metric-review",
-            "This is a read-only metric review; underlying record access remains permission-scoped.",
+            "Summarize visible dashboard signals",
+            "Summarize the visible KPI cards and charts, call out meaningful values or empty states, and propose the next read-only review.",
+            "dashboard-summary",
+            metadata.get("dashboard_snapshot", {}).get("summary") or "This is a read-only review of the dashboard aggregates currently available to the user.",
             "dashboard", action_type="analyze",
         )]
 
@@ -401,7 +421,11 @@ def _page_summary(page_type: str, context: dict[str, Any], metadata: dict[str, A
     if page_type == "Report":
         return f"{label} report using {_filter_phrase(_filters(context)) or 'its current broad scope'}; guidance focuses on interpretation."
     if page_type == "Dashboard":
-        return f"{label} dashboard with {metadata.get('card_count', 'visible')} metric signal(s); guidance focuses on prioritization."
+        chart_count = metadata.get("chart_count", 0)
+        card_count = metadata.get("number_card_count", 0)
+        if chart_count or card_count:
+            return f"{label} dashboard with {card_count} KPI card(s) and {chart_count} chart(s); guidance focuses on the visible values and operational follow-up."
+        return f"{label} dashboard; guidance focuses on the visible dashboard scope and readable metrics."
     if page_type == "Workspace":
         return f"{label} workspace; guidance focuses on the next visible area to open."
     return f"{label} page; guidance is limited to the available route context."
@@ -425,18 +449,56 @@ def _safe_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
         return {}
     allowed = {
         "required_fields", "field_names", "has_status", "has_workflow_state", "is_submittable",
-        "field_count", "ref_doctype", "report_type", "card_count", "link_count", "module",
-        "title_field", "is_tree",
+        "field_count", "ref_doctype", "report_type", "card_count", "chart_count", "number_card_count",
+        "chart_titles", "number_card_titles", "dashboard_snapshot", "link_count", "module", "title_field", "is_tree",
     }
     clean: dict[str, Any] = {}
     for key in allowed:
         value = metadata.get(key)
-        if key in {"required_fields", "field_names"} and isinstance(value, list):
+        if key in {"required_fields", "field_names", "chart_titles", "number_card_titles"} and isinstance(value, list):
             clean[key] = [str(item)[:80] for item in value[:30] if _safe_field_name(item)]
+        elif key == "dashboard_snapshot" and isinstance(value, dict):
+            clean[key] = _safe_dashboard_snapshot(value)
         elif isinstance(value, bool | int | float):
             clean[key] = value
         elif isinstance(value, str) and value:
             clean[key] = value[:120]
+    return clean
+
+
+def _safe_dashboard_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Keep advisor metadata compact while retaining useful dashboard facts."""
+    clean: dict[str, Any] = {}
+    for key in ("title", "source", "summary"):
+        if isinstance(snapshot.get(key), str):
+            clean[key] = snapshot[key][:900]
+    for key in ("filters",):
+        if isinstance(snapshot.get(key), dict):
+            clean[key] = {str(name)[:80]: str(value)[:120] for name, value in list(snapshot[key].items())[:8]}
+    for key in ("charts", "number_cards"):
+        items = []
+        for item in snapshot.get(key) or []:
+            if not isinstance(item, dict):
+                continue
+            compact = {
+                name: str(item.get(name) or "")[:120]
+                for name in ("name", "title", "kind", "aggregation", "source_doctype", "report_name", "measure", "group_by", "timespan", "time_interval", "function", "status")
+                if item.get(name) not in (None, "")
+            }
+            if "value" in item and isinstance(item["value"], int | float):
+                compact["value"] = item["value"]
+            if isinstance(item.get("data"), dict):
+                data = item["data"]
+                if isinstance(data.get("labels"), list):
+                    compact["labels"] = [str(value)[:80] for value in data["labels"][:8]]
+                if isinstance(data.get("series"), list):
+                    compact["series"] = [
+                        {"name": str(series.get("name") or "Series")[:80], "values": series.get("values", [])[:8]}
+                        for series in data["series"][:4]
+                        if isinstance(series, dict)
+                    ]
+            items.append(compact)
+        clean[key] = items[:8]
     return clean
 
 

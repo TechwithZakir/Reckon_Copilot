@@ -176,16 +176,26 @@ class FrappePermissionAdapter:
         return bool(self.frappe.db.exists("Workspace", workspace_name))
 
     def has_dashboard_permission(self, dashboard_name: str, user: str) -> bool:
-        if not self.frappe.db.exists("Dashboard", dashboard_name):
-            return False
-        return bool(
-            self.frappe.has_permission(
-                "Dashboard",
-                ptype="read",
-                doc=dashboard_name,
-                user=user,
+        if self.frappe.db.exists("Dashboard", dashboard_name):
+            return bool(
+                self.frappe.has_permission(
+                    "Dashboard",
+                    ptype="read",
+                    doc=dashboard_name,
+                    user=user,
+                )
             )
-        )
+        # Frappe v16 dashboard-view routes can resolve to a Workspace record.
+        if self.frappe.db.exists("Workspace", dashboard_name):
+            return bool(
+                self.frappe.has_permission(
+                    "Workspace",
+                    ptype="read",
+                    doc=dashboard_name,
+                    user=user,
+                )
+            )
+        return False
 
     def user_permissions_allow(
         self,

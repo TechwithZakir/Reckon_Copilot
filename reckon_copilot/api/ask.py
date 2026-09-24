@@ -7,6 +7,7 @@ from reckon_copilot.cache.keys import build_cache_identity, build_cache_key
 from reckon_copilot.cache.manager import CacheManager, FrappeCacheBackend
 from reckon_copilot.cache.ttl import ttl_for
 from reckon_copilot.context.builders import build_context
+from reckon_copilot.context.dashboard import enrich_dashboard_context
 from reckon_copilot.knowledge.rag import RagOrchestrator
 from reckon_copilot.knowledge.repository import FrappeKnowledgeRepository
 from reckon_copilot.knowledge.retriever import KnowledgeRetriever
@@ -64,6 +65,7 @@ def ask_with_services(
     rag: RagOrchestrator | None = None,
     site: str = "default",
     selected_model: str | None = None,
+    context_enricher=None,
 ) -> AskResult:
     question = (question or "").strip()
     if not question:
@@ -75,6 +77,8 @@ def ask_with_services(
         user=user,
         adapter=permission_adapter,
     ).context
+    if callable(context_enricher):
+        authorized = context_enricher(authorized)
     evidence = evidence or []
     intent = classify_intent(question)
     if not evidence and rag:
@@ -299,6 +303,9 @@ if frappe:
                 ),
                 site=_frappe_site(frappe),
                 selected_model=selected_model,
+                context_enricher=lambda authorized: enrich_dashboard_context(
+                    authorized, frappe, user=getattr(frappe.session, "user", None)
+                ),
             )
             return result.as_dict()
         except PermissionDenied as error:
@@ -339,6 +346,7 @@ if frappe:
                 user=user,
                 adapter=FrappePermissionAdapter(frappe),
             ).context
+            authorized = enrich_dashboard_context(authorized, frappe, user=user)
 
             _stream_publish(request_id, "stage", {"stage": "Checking permissions", "percent": 24})
             intent = classify_intent(question)
