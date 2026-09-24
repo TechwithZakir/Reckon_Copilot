@@ -1,0 +1,33 @@
+{
+  "actions": [],
+  "autoname": "field:feedback_key",
+  "creation": "2026-09-24 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["feedback_key", "template_id", "page_type", "target_doctype", "module", "catalog_version", "selected_count", "helpful_count", "not_relevant_count", "too_generic_count", "dismissed_count", "last_outcome", "last_seen_at"],
+  "fields": [
+    {"fieldname": "feedback_key", "fieldtype": "Data", "label": "Feedback Key", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "template_id", "fieldtype": "Data", "label": "Template ID", "read_only": 1},
+    {"fieldname": "page_type", "fieldtype": "Data", "label": "Page Type", "read_only": 1},
+    {"fieldname": "target_doctype", "fieldtype": "Data", "label": "Target DocType", "read_only": 1},
+    {"fieldname": "module", "fieldtype": "Data", "label": "Module", "read_only": 1},
+    {"fieldname": "catalog_version", "fieldtype": "Data", "label": "Catalog Version", "read_only": 1},
+    {"fieldname": "selected_count", "fieldtype": "Int", "label": "Selected", "read_only": 1},
+    {"fieldname": "helpful_count", "fieldtype": "Int", "label": "Helpful", "read_only": 1},
+    {"fieldname": "not_relevant_count", "fieldtype": "Int", "label": "Not Relevant", "read_only": 1},
+    {"fieldname": "too_generic_count", "fieldtype": "Int", "label": "Too Generic", "read_only": 1},
+    {"fieldname": "dismissed_count", "fieldtype": "Int", "label": "Dismissed", "read_only": 1},
+    {"fieldname": "last_outcome", "fieldtype": "Data", "label": "Last Outcome", "read_only": 1},
+    {"fieldname": "last_seen_at", "fieldtype": "Datetime", "label": "Last Seen At", "read_only": 1}
+  ],
+  "links": [],
+  "modified": "2026-09-24 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Reckon Copilot",
+  "name": "Copilot Suggestion Feedback",
+  "owner": "Administrator",
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}

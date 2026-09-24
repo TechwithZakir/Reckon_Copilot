@@ -84,6 +84,15 @@ export function getAgentAdvice(context) {
   return call("reckon_copilot.api.advisor.get_agent_advice", { context });
 }
 
+export function recordSuggestionFeedback(templateId, outcome, context, catalogVersion = "1") {
+  return call("reckon_copilot.api.catalog_learning.record_suggestion_feedback", {
+    template_id: templateId,
+    outcome,
+    context,
+    catalog_version: catalogVersion,
+  });
+}
+
 export function runAnalytics(question, context) {
   return call("reckon_copilot.api.analytics.run", { question, context });
 }

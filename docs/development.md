@@ -125,3 +125,40 @@ priority, source and action type, and that unrelated or field-incomplete
 DocTypes do not receive catalog suggestions. Confirm every catalog suggestion
 only starts a Copilot read-only prompt; it must not create, update, submit,
 approve or delete an ERP record.
+
+## Controlled Advisor Learning Verification
+
+The catalog improvement loop is deliberately administrator-controlled. The
+browser records only aggregate suggestion outcomes and never stores raw page
+HTML, document values, document names or user identity in feedback records.
+
+After migration, verify the new administrator-only workspace links:
+
+- `Copilot Suggestion Feedback` contains aggregate counts only.
+- `Copilot Catalog Candidate` contains pending candidates after repeated
+  `not relevant` or `too generic` feedback.
+- Candidate validation reports the installed-field and native-read-permission
+  result before approval is possible.
+- A System Manager can approve a `VALID` candidate, creating an enabled,
+  versioned `Copilot Suggested Action Template`.
+- A non-administrator cannot publish a candidate, and an approved template
+  remains read-only guidance that only starts a prompt.
+
+The scheduled job is safe to run repeatedly: candidate generation is
+idempotent, and it never publishes templates or executes ERPNext writes.
+The endpoints are:
+
+```text
+/api/method/reckon_copilot.api.catalog_learning.record_suggestion_feedback
+/api/method/reckon_copilot.api.catalog_learning.generate_catalog_candidates
+/api/method/reckon_copilot.api.catalog_learning.approve_catalog_candidate
+```
+
+Run the automated checks before and after migration:
+
+```powershell
+python -m unittest discover -s reckon_copilot/tests -p "test_*.py"
+python -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```

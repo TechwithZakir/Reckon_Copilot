@@ -26,6 +26,10 @@ add_to_apps_screen = [
 
 after_migrate = ["reckon_copilot.patches.v0_1.sync_desktop_app_icon.execute"]
 
+scheduler_events = {
+    "daily": ["reckon_copilot.jobs.catalog_learning.generate_candidates"],
+}
+
 
 def after_install():
     """Ensure Desk app icon exists after fresh install."""

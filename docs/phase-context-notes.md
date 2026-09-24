@@ -163,6 +163,29 @@ This catalog completion has no dependency on Phase 11. Phase 11 can consume
 the same read-only advisor results while adding deterministic forecasting and
 anomaly calculations; it does not need to change catalog callers.
 
+## Controlled advisor learning completion
+
+The catalog now has a controlled feedback loop before Phase 11. The browser
+records only coarse outcomes for catalog suggestions (`selected` and
+`not_relevant`/`too_generic`), keyed by a hash of the template and safe page
+identity. It never stores a user, document name, raw prompt, document value or
+page HTML in feedback aggregates.
+
+Repeated negative feedback is converted into a pending `Copilot Catalog
+Candidate`. The daily job generates candidates only; it never publishes a
+prompt, retrains an LLM, changes a workflow or executes an ERP action. Each
+candidate is validated against the currently installed field names and native
+read permission before it can be approved. A System Manager must explicitly
+publish it through the approval endpoint, after which it is stored as an
+enabled, versioned, read-only `Copilot Suggested Action Template` and is
+merged into the advisor without changing its callers. Unsafe write action types
+are rejected at both candidate validation and runtime template loading.
+
+The new aggregate, candidate and approved-template DocTypes are available in
+the Reckon Copilot workspace and administrator sidebar. This completes the
+catalog's privacy-safe continuous-improvement boundary before Phase 11; it is
+controlled prompt improvement, not automatic model training.
+
 The advisor API also has a rolling-deployment compatibility fallback. If an
 older worker raises because it has not loaded `authorize_action`, the endpoint
 returns read-only page advice with a compatibility notice instead of allowing

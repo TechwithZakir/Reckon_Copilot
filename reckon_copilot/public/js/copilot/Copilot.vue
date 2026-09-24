@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { approvePreview, executeAction, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, savePreferences } from "./api";
+import { approvePreview, executeAction, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, recordSuggestionFeedback, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ActionApproval from "./ActionApproval.vue";
 import ContextHeader from "./ContextHeader.vue";
@@ -179,11 +179,27 @@ async function requestActionPreview(action) {
 }
 
 function handleSuggestedAction(item) {
+  recordCatalogFeedback(item, "selected");
   if (item?.action_type && item.requires_confirmation) {
     requestActionPreview(item.action_type);
     return;
   }
   selectedPrompt.value = item?.prompt || item?.title || "";
+}
+
+function selectContextualPrompt(item) {
+  const value = typeof item === "string" ? item : item?.prompt || item?.title || "";
+  selectedPrompt.value = value;
+  recordCatalogFeedback(item, "selected");
+}
+
+function rejectContextualPrompt(item) {
+  recordCatalogFeedback(item, "not_relevant");
+}
+
+function recordCatalogFeedback(item, outcome) {
+  if (!item || typeof item === "string" || item.source !== "catalog" || !item.id) return;
+  recordSuggestionFeedback(item.id, outcome, props.routeContext, item.catalog_version || "1").catch(() => {});
 }
 
 function actionMark(item) {
@@ -532,7 +548,8 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
           :expanded="showAllQuestions"
           :has-more="moreQuestionCount > 0"
           :more-count="moreQuestionCount"
-          @select="selectedPrompt = $event"
+          @select="selectContextualPrompt"
+          @feedback="rejectContextualPrompt"
           @toggle-more="toggleQuestions"
         />
       </div>

@@ -5,7 +5,7 @@ defineProps({
   hasMore: { type: Boolean, default: false },
   moreCount: { type: Number, default: 0 },
 });
-defineEmits(["select", "toggle-more"]);
+defineEmits(["select", "feedback", "toggle-more"]);
 
 function promptLabel(prompt) {
   return typeof prompt === "string" ? prompt : prompt?.title || prompt?.prompt || "Question";
@@ -23,16 +23,26 @@ function promptValue(prompt) {
       <h3 id="rc-suggestions-title">Quick Questions</h3>
     </div>
     <div class="rc-chip-list">
-      <button
-        v-for="prompt in prompts"
-        :key="promptLabel(prompt)"
-        class="rc-chip"
-        type="button"
-        :title="promptValue(prompt)"
-        @click="$emit('select', promptValue(prompt))"
-      >
-        {{ promptLabel(prompt) }}
-      </button>
+      <span v-for="prompt in prompts" :key="promptLabel(prompt)" class="rc-chip-wrap">
+        <button
+          class="rc-chip"
+          type="button"
+          :title="promptValue(prompt)"
+          @click="$emit('select', prompt)"
+        >
+          {{ promptLabel(prompt) }}
+        </button>
+        <button
+          v-if="typeof prompt !== 'string' && prompt.source === 'catalog'"
+          class="rc-chip-feedback"
+          type="button"
+          title="Not useful"
+          aria-label="Mark suggestion as not useful"
+          @click.stop="$emit('feedback', prompt)"
+        >
+          ×
+        </button>
+      </span>
       <button
         v-if="hasMore || expanded"
         class="rc-chip rc-chip-more"

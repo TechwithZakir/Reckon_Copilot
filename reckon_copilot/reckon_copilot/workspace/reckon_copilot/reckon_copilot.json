@@ -72,6 +72,36 @@
       "type": "Link"
     },
     {
+      "description": "Review privacy-safe aggregate suggestion feedback.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Suggestion Feedback",
+      "link_to": "Copilot Suggestion Feedback",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Review validated prompt improvement candidates.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Catalog Candidate",
+      "link_to": "Copilot Catalog Candidate",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "description": "Review administrator-approved advisor templates.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Suggested Action Template",
+      "link_to": "Copilot Suggested Action Template",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
       "description": "Manage user shell preferences.",
       "hidden": 0,
       "is_query_report": 0,
@@ -170,6 +200,33 @@
       "format": "{}",
       "label": "Vector Indexes",
       "link_to": "Copilot Knowledge Vector Index",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Yellow",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Suggestion Feedback",
+      "link_to": "Copilot Suggestion Feedback",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Orange",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Catalog Candidates",
+      "link_to": "Copilot Catalog Candidate",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Green",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Approved Templates",
+      "link_to": "Copilot Suggested Action Template",
       "stats_filter": "[]",
       "type": "DocType"
     },

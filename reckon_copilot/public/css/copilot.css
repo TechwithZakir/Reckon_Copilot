@@ -484,6 +484,12 @@
   gap: 8px;
 }
 
+.rc-chip-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+}
+
 .rc-chip {
   min-height: 30px;
   max-width: 100%;
@@ -495,6 +501,31 @@
   cursor: pointer;
   font-size: 12px;
   white-space: normal;
+}
+
+.rc-chip-wrap .rc-chip {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.rc-chip-feedback {
+  width: 24px;
+  border: 1px solid #dce8f6;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: #f8fbff;
+  color: #7890aa;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.rc-chip-feedback:hover,
+.rc-chip-feedback:focus-visible {
+  border-color: #8ebdff;
+  background: #eef6ff;
+  color: #25507e;
+  outline: none;
 }
 
 .rc-chip-more {

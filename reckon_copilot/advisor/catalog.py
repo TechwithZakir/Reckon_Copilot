@@ -5,6 +5,7 @@ from typing import Any, Iterable
 
 
 PAGE_TYPES = {"Homepage", "Workspace", "Dashboard", "List", "Form", "Report"}
+WRITE_ACTIONS = {"create", "update", "delete", "submit", "approve"}
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,7 @@ class AdvisorTemplate:
             raise ValueError("Advisor templates require a key, title and prompt")
         if self.page_type not in PAGE_TYPES:
             raise ValueError("Advisor template has an unsupported page type")
-        if self.intent_type.startswith("write_"):
+        if self.intent_type.startswith("write_") or self.action_type in WRITE_ACTIONS:
             raise ValueError("Runtime catalog templates cannot enable write intents")
 
     def matches(self, context: dict[str, Any], metadata: dict[str, Any]) -> bool:
@@ -99,6 +100,13 @@ class AdvisorCatalog:
 
     def __init__(self, templates: Iterable[AdvisorTemplate] = ()):
         self.templates = tuple(templates)
+
+    def merged(self, templates: Iterable[AdvisorTemplate] = ()) -> "AdvisorCatalog":
+        """Return a catalog with additional approved templates appended."""
+        return AdvisorCatalog((*self.templates, *tuple(templates)))
+
+    def find(self, key: str) -> AdvisorTemplate | None:
+        return next((template for template in self.templates if template.key == key), None)
 
     def questions_for(self, context: dict[str, Any], metadata: dict[str, Any]) -> list[dict[str, Any]]:
         return [

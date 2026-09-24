@@ -4,6 +4,8 @@ import json
 from datetime import date
 from typing import Any
 
+from reckon_copilot.advisor.catalog import default_catalog
+from reckon_copilot.advisor.learning import FrappeCatalogLearningRepository
 from reckon_copilot.advisor.service import get_advice
 from reckon_copilot.context.dashboard import build_dashboard_snapshot, enrich_dashboard_context
 from reckon_copilot.permissions.boundary import (
@@ -37,11 +39,13 @@ def get_agent_advice(context: dict[str, Any] | str | None = None) -> dict[str, A
             frappe,
             user=frappe.session.user,
         )
+        catalog = default_catalog().merged(FrappeCatalogLearningRepository(frappe).list_templates())
         result = get_advice(
             authorized,
             user=frappe.session.user,
             permission_adapter=adapter,
             metadata=_safe_page_metadata(authorized, frappe, dashboard_snapshot=dashboard_snapshot),
+            catalog=catalog,
         )
         return result
     except PermissionDenied as error:
