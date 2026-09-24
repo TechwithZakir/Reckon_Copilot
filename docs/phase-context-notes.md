@@ -44,6 +44,12 @@ The Copilot panel now renders a preview approval dialog for Form contexts, inclu
 
 Phase 9 now issues short-lived HMAC approval tokens scoped to the exact plan hash, user and site. The approval endpoint records approval intent but returns `execution: disabled`; no token can execute a write until a separately audited executor is implemented.
 
+## Phase 9 completion
+
+Phase 9 is complete. It delivers the contextual Agent Advisor, server-validated multi-model selection, preview-first action planning, permission-bound Form action previews, redacted plan values, deterministic plan hashes and short-lived signed approval tokens. The phase deliberately stops before ERPNext mutation: approved plans still return `execution: disabled`. Actual create, update, delete, submit and approve execution belongs to the next action-execution phase and must add native DocType permission checks, audit records, idempotency, transaction/error handling and rollback or compensation behavior.
+
+The next phase should implement the controlled executor only after those safeguards are designed and tested.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.
