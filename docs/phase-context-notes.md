@@ -30,6 +30,8 @@ The Copilot panel now keeps urgent findings in Alerts and shows only supporting 
 
 The composer UI now uses icon controls, functional Enter/Shift+Enter behavior, response-level token estimates and a non-placeholder runtime label. Model selection remains server-controlled until a multi-model provider contract is added.
 
+The composer also provides a Cancel control during an active request. Cancellation stops UI rendering of later realtime events and marks the conversation as cancelled; server-side request cancellation remains a future transport capability.
+
 ## Important product direction
 
 Do not rely on browser-only heuristics for serious DocType, module, report, dashboard or record recognition.

@@ -471,6 +471,12 @@
   font-weight: 800;
 }
 
+.rc-cancel-chat {
+  color: #b42318;
+  border-color: #f3b8b2;
+  background: #fff4f2;
+}
+
 .rc-clear-chat {
   padding: 4px 8px;
   border: 1px solid #d5e5f8;

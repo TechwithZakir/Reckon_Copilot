@@ -101,6 +101,7 @@ function startProgress(message) {
 }
 
 function applyStreamEvent(message, event) {
+  if (message.cancelled) return;
   if (event.event === "stage") {
     const stageIndex = progressStages.indexOf(event.stage);
     if (stageIndex >= 0) {
@@ -134,6 +135,7 @@ function applyStreamEvent(message, event) {
 }
 
 function finishProgress(message, normalized, options = {}) {
+  if (message.cancelled) return;
   const responseText = normalized.text || "No answer was found for this page context.";
   message.tone = normalized.tone || "normal";
   message.meta = {
@@ -187,6 +189,21 @@ function clearConversation() {
   messages.value = [];
 }
 
+function cancelConversation() {
+  const message = messages.value[messages.value.length - 1];
+  if (!message || !isSending.value) return;
+  message.cancelled = true;
+  message.tone = "warning";
+  message.text = "Request cancelled. No response was sent.";
+  message.progress = {
+    ...(message.progress || {}),
+    active: false,
+    label: "Cancelled",
+    percent: message.progress?.percent || 0,
+  };
+  isSending.value = false;
+}
+
 function createRequestId() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -207,10 +224,17 @@ onBeforeUnmount(() => {
     <div class="rc-chat-toolbar">
       <h3 id="rc-chat-title">Conversation</h3>
       <button
-        v-if="messages.length"
+        v-if="isSending"
+        class="rc-clear-chat rc-cancel-chat"
+        type="button"
+        @click="cancelConversation"
+      >
+        Cancel
+      </button>
+      <button
+        v-else-if="messages.length"
         class="rc-clear-chat"
         type="button"
-        :disabled="isSending"
         @click="clearConversation"
       >
         Clear
