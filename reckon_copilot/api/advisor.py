@@ -23,6 +23,7 @@ def _whitelist(**kwargs: Any):
 
 @_whitelist(allow_guest=False)
 def get_agent_advice(context: dict[str, Any] | str | None = None) -> dict[str, Any]:
+    authorized: dict[str, Any] | None = None
     try:
         payload = json.loads(context) if isinstance(context, str) else context
         if not isinstance(payload, dict):
@@ -45,6 +46,95 @@ def get_agent_advice(context: dict[str, Any] | str | None = None) -> dict[str, A
         return result
     except PermissionDenied as error:
         return {"ok": False, "access_denied": True, "message": str(error), "questions": [], "actions": []}
+    except AttributeError as error:
+        # A rolling deployment can leave an old worker without the action gate.
+        # Keep the request panel-safe and read-only until that worker restarts.
+        if "authorize_action" not in str(error) or not authorized:
+            raise
+        return _legacy_read_only_advice(authorized)
+
+
+def _legacy_read_only_advice(context: dict[str, Any]) -> dict[str, Any]:
+    """Return useful advice while an older worker reloads the Phase 9 boundary."""
+    page_type = str(context.get("page_type") or "Page")
+    label = str(
+        context.get("doctype")
+        or context.get("report_name")
+        or context.get("dashboard_name")
+        or context.get("workspace_name")
+        or context.get("homepage_name")
+        or "this page"
+    )
+    date_hint = _current_date_hint(context)
+    if page_type == "Form" and context.get("doctype") == "Sales Order":
+        questions = [
+            {
+                "id": "compat.sales_order.fulfilment",
+                "title": "What remains to deliver on this order?",
+                "prompt": f"{date_hint}review permitted delivery, billing and outstanding quantities for this Sales Order.",
+                "category": "sales-fulfilment",
+                "reason": "Read-only Sales Order guidance remains available while the Copilot worker reloads.",
+                "source": "context",
+                "source_label": "Current page",
+                "priority": "high",
+                "action_type": "review",
+                "action_label": "Review",
+                "execution": "prompt",
+                "requires_confirmation": False,
+            },
+        ]
+        actions = [
+            {
+                "id": "compat.sales_order.review",
+                "title": "Prepare Sales Order readiness review",
+                "prompt": f"{date_hint}prepare a read-only review of customer, items, delivery, billing and workflow status for this Sales Order.",
+                "category": "sales-readiness",
+                "reason": "This fallback never prepares or executes a write action.",
+                "source": "context",
+                "source_label": "Current page",
+                "priority": "normal",
+                "action_type": "review",
+                "action_label": "Review",
+                "execution": "prompt",
+                "requires_confirmation": False,
+            },
+        ]
+    else:
+        questions = [
+            {
+                "id": "compat.page.review",
+                "title": f"What should I review on this {label} page?",
+                "prompt": f"{date_hint}review the permitted {label} context and explain the safest useful next step.",
+                "category": "page-review",
+                "reason": "Read-only guidance remains available while the Copilot worker reloads.",
+                "source": "context",
+                "source_label": "Current page",
+                "priority": "normal",
+                "action_type": "review",
+                "action_label": "Review",
+                "execution": "prompt",
+                "requires_confirmation": False,
+            },
+        ]
+        actions = []
+    return {
+        "ok": True,
+        "advisor_version": "v2-compat",
+        "audience": "end_user",
+        "context_fingerprint": context.get("fingerprint"),
+        "context_label": label,
+        "page_family": "sales" if context.get("doctype") == "Sales Order" else "general",
+        "page_summary": f"{label} context is available for read-only guidance as of {_current_date_hint(context).removesuffix(', ')}.",
+        "compatibility_notice": "Read-only guidance is available while the Copilot worker reloads.",
+        "questions": questions,
+        "actions": actions,
+        "signals": {"page_type": page_type, "compatibility_fallback": True, "metadata": {}},
+    }
+
+
+def _current_date_hint(context: dict[str, Any]) -> str:
+    value = context.get("analysis_date") or context.get("current_date") or date.today().isoformat()
+    return f"As of {str(value)[:20]}, "
 
 
 def _safe_page_metadata(

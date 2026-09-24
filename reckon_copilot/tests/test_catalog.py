@@ -1,11 +1,29 @@
 import unittest
 
 from reckon_copilot.advisor.catalog import AdvisorCatalog, AdvisorTemplate, default_catalog
+from reckon_copilot.api.advisor import _legacy_read_only_advice
 from reckon_copilot.advisor.service import get_advice
 from reckon_copilot.permissions.boundary import StaticPermissionAdapter
 
 
 class AdvisorCatalogTests(unittest.TestCase):
+    def test_rolling_deployment_fallback_is_read_only_and_panel_safe(self):
+        result = _legacy_read_only_advice(
+            {
+                "page_type": "Form",
+                "doctype": "Sales Order",
+                "document_name": "SAL-ORD-2026-00001",
+                "fingerprint": "safe-context",
+            }
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["advisor_version"], "v2-compat")
+        self.assertTrue(result["compatibility_notice"])
+        self.assertTrue(result["questions"])
+        self.assertTrue(result["actions"])
+        self.assertTrue(all(item["execution"] == "prompt" for item in result["questions"] + result["actions"]))
+
     def test_default_catalog_matches_real_doctype_and_available_fields(self):
         catalog = default_catalog()
         context = {"page_type": "List", "doctype": "Sales Order"}

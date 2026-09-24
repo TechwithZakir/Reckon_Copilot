@@ -115,6 +115,13 @@ DocTypes are rejected before recommendations reach the panel. A future Frappe
 repository can supply administrator-managed templates through this interface
 without changing advisor callers.
 
+The advisor API also has a rolling-deployment compatibility fallback. If an
+older worker raises because it has not loaded `authorize_action`, the endpoint
+returns read-only page advice with a compatibility notice instead of allowing
+an AttributeError to become a Frappe server-error modal. The fallback never
+exposes document data or enables a write preview; workers should still be
+restarted after deployment so the full Phase 9 boundary and catalog are used.
+
 ## Phase 9 advisor relevance enhancement
 
 The Agent Advisor was strengthened using Frappe v16's native permission and metadata model. The implementation follows the documented behavior of `frappe.has_permission`, `frappe.get_meta`, permission-aware `frappe.db.get_list` and the document permission hooks described in the Frappe Framework documentation. Structural metadata is read only after route authorization and is reduced to safe signals: required field labels, field count, status/workflow presence, submit capability, report source DocType and compact dashboard/workspace counts. No document values, report rows, chart data or unrestricted workspace content are returned by the advisor.
