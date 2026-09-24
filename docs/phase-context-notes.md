@@ -50,6 +50,52 @@ Phase 9 is complete. It delivers the contextual Agent Advisor, server-validated 
 
 The next phase should implement the controlled executor only after those safeguards are designed and tested.
 
+## Phase 9 Suggested Actions Catalog alignment
+
+`Reckon_Copilot_Suggested_Actions_Catalog.md` is now the product reference for
+contextual Suggested Actions and Quick Questions in Phase 9. The catalog is a
+design and data contract, not executable instructions. It extends the Phase 9
+core advisor with the following rules:
+
+- Build candidates from trusted live context first, then verified business
+  signals, administrator-approved action templates, approved knowledge and
+  privacy-safe aggregate feedback.
+- Rank by impact, urgency, confidence, page/DocType match, record state,
+  active scope and freshness. Permissions, installed features, available
+  fields and current schema are hard eligibility gates, not ranking bonuses.
+- Put a permission-safe next best action first for a verified overdue item,
+  blocked workflow, approval, exception or other actionable condition. Show
+  the reason, evidence and scope used. Suppress duplicate, stale, unsupported
+  and low-confidence candidates.
+- Keep Suggested Actions and Quick Questions as separate ranked result sets,
+  with independent `More suggestions` and `More Quick Questions` expansion.
+  Do not use fixed limits such as two actions or three questions as the
+  product contract.
+- Generate page-aware candidates for Homepage, module/workspace, Dashboard,
+  List, draft/submitted Form, Report, Setup/configuration and error/validation
+  contexts. Resolve the actual installed app, module, DocType, fields,
+  workflow/status, filters, company/date scope and permitted linked records
+  before showing a field, report, feature or action.
+- Keep recommendations read-only by default. A proposed create, update,
+  delete, submit or approve operation must expose its target, values, risk,
+  evidence and expected effect, then require explicit confirmation and a
+  separately audited executor. Candidate generation and nightly refresh must
+  never execute writes, change workflows or retrain the model.
+- Quick Questions must be grounded in approved, version-matched knowledge and
+  return source attribution. They must distinguish official product behavior
+  from Reckon-specific configuration and must not suggest absent fields,
+  reports or features.
+
+The current Phase 9 core implements the runtime advisor contract, structured
+reasons/priority/source/action type, page-specific prompts, permission-bound
+previews and safe model selection. The catalog's continuous-learning
+extension remains tracked in Phase 9: administrator-controlled source and
+template records, incremental scheduled ingestion, candidate validation and
+approval, versioned index snapshots with rollback, independent expansion,
+privacy-safe aggregate feedback and the associated ranking/ingestion tests.
+These additions must reuse the existing context, knowledge, vector-search,
+cache and permission boundaries rather than introducing feature-local checks.
+
 ## Phase 9 advisor relevance enhancement
 
 The Agent Advisor was strengthened using Frappe v16's native permission and metadata model. The implementation follows the documented behavior of `frappe.has_permission`, `frappe.get_meta`, permission-aware `frappe.db.get_list` and the document permission hooks described in the Frappe Framework documentation. Structural metadata is read only after route authorization and is reduced to safe signals: required field labels, field count, status/workflow presence, submit capability, report source DocType and compact dashboard/workspace counts. No document values, report rows, chart data or unrestricted workspace content are returned by the advisor.
