@@ -844,6 +844,9 @@
 }
 
 .rc-runtime {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-top: 9px;
@@ -859,6 +862,19 @@
   border-radius: 999px;
   background: #f3f7fb;
   color: #49647f;
+}
+
+.rc-runtime > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-runtime-model {
+  display: inline-flex;
+  min-width: 0;
 }
 
 .rc-runtime i {
@@ -1007,10 +1023,24 @@
     grid-template-columns: 1fr;
   }
 
-  .rc-composer-help,
-  .rc-runtime {
+  .rc-composer-help {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .rc-runtime {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    row-gap: 7px;
+  }
+
+  .rc-runtime-model {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .rc-runtime > span:last-child {
+    grid-column: 1 / -1;
+    text-align: left;
   }
 }
