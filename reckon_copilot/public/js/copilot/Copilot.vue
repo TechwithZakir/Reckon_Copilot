@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { getInsights, getNotifications, getShellConfig, savePreferences } from "./api";
+import { getAgentAdvice, getInsights, getNotifications, getShellConfig, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ContextHeader from "./ContextHeader.vue";
 import NotificationCenter from "./NotificationCenter.vue";
@@ -21,12 +21,20 @@ const settingsOpen = ref(false);
 const insights = ref([]);
 const insightCounts = ref({ critical: 1, warning: 1, info: 1 });
 const notifications = ref([]);
+const advisorQuestions = ref([]);
+const advisorActions = ref([]);
 
 const actionPrompts = computed(() => {
+  const fromAdvisor = advisorActions.value.map((item) => item.title || item.prompt).filter(Boolean);
   const fromInsights = insights.value.flatMap((item) => item.suggested_prompts || []);
   const defaults = ["Explain this page", "What should I review?", "Which filters may help?"];
-  return [...new Set([...fromInsights, ...defaults])].slice(0, 4);
+  return [...new Set([...fromAdvisor, ...fromInsights, ...defaults])].slice(0, 4);
 });
+
+const contextualPrompts = computed(() => [
+  ...advisorQuestions.value.map((item) => item.title || item.prompt).filter(Boolean),
+  ...prompts.value,
+]);
 
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
@@ -134,20 +142,27 @@ async function loadInsights() {
   if (!props.routeContext || props.routeContext.access_denied) {
     insights.value = [];
     notifications.value = [];
+    advisorQuestions.value = [];
+    advisorActions.value = [];
     insightCounts.value = { critical: 0, warning: props.routeContext?.access_denied ? 1 : 0, info: 0 };
     return;
   }
   try {
-    const [result, notificationResult] = await Promise.all([
+    const [result, notificationResult, advice] = await Promise.all([
       getInsights(props.routeContext),
       getNotifications(props.routeContext, [], state.value.preferences.notifications_enabled),
+      getAgentAdvice(props.routeContext).catch(() => ({ questions: [], actions: [] })),
     ]);
     insights.value = result.findings || [];
     insightCounts.value = result.counts || { critical: 0, warning: 0, info: 0 };
     notifications.value = notificationResult.notifications || [];
+    advisorQuestions.value = advice.questions || [];
+    advisorActions.value = advice.actions || [];
   } catch (_error) {
     insights.value = [];
     notifications.value = [];
+    advisorQuestions.value = [];
+    advisorActions.value = [];
     insightCounts.value = { critical: 0, warning: 1, info: 0 };
   }
 }
@@ -372,7 +387,7 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
           </button>
         </section>
 
-        <SuggestedPrompts :prompts="prompts" @select="selectedPrompt = $event" />
+        <SuggestedPrompts :prompts="contextualPrompts" @select="selectedPrompt = $event" />
       </div>
 
       <div class="rc-panel-footer">

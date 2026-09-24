@@ -80,6 +80,10 @@ export function getNotifications(context, evidence = [], enabled = true) {
   });
 }
 
+export function getAgentAdvice(context) {
+  return call("reckon_copilot.api.advisor.get_agent_advice", { context });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }
