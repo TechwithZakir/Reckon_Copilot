@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from reckon_copilot.actions.planner import plan_action
+from reckon_copilot.actions.approval import issue_approval_token
 from reckon_copilot.permissions.boundary import FrappePermissionAdapter, PermissionDenied
 
 
@@ -30,3 +31,22 @@ def preview_action(context: Any = None, action: str = "", values: Any = None) ->
         )
     except PermissionDenied as error:
         return {"ok": False, "access_denied": True, "message": str(error)}
+
+
+@_whitelist(allow_guest=False)
+def approve_preview(plan: Any = None) -> dict[str, Any]:
+    """Issue scoped approval only; this endpoint never executes a write."""
+    import frappe  # type: ignore
+    payload = json.loads(plan) if isinstance(plan, str) else plan
+    if not isinstance(payload, dict) or not payload.get("plan_hash"):
+        return {"ok": False, "message": "A valid action plan is required."}
+    secret = str(getattr(frappe, "conf", {}).get("encryption_key") or "")
+    if not secret:
+        return {"ok": False, "message": "Approval signing is not configured."}
+    token = issue_approval_token(
+        payload,
+        user=frappe.session.user,
+        site=getattr(frappe.local, "site", "default"),
+        secret=secret,
+    )
+    return {"ok": True, "approved": True, "execution": "disabled", "approval_token": token}

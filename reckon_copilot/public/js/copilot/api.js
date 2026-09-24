@@ -92,6 +92,10 @@ export function previewAction(context, action, values = {}) {
   });
 }
 
+export function approvePreview(plan) {
+  return call("reckon_copilot.api.actions.approve_preview", { plan });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }

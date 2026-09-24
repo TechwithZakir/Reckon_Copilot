@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, savePreferences } from "./api";
+import { approvePreview, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ActionApproval from "./ActionApproval.vue";
 import ContextHeader from "./ContextHeader.vue";
@@ -125,6 +125,15 @@ async function requestActionPreview(action) {
     if (result?.plan) actionPlan.value = result.plan;
   } catch (error) {
     actionPlan.value = { error: error.message || "Action preview is unavailable." };
+  }
+}
+
+async function approveActionPlan() {
+  if (!actionPlan.value) return;
+  try {
+    await approvePreview(actionPlan.value);
+  } finally {
+    actionPlan.value = null;
   }
 }
 
@@ -431,7 +440,7 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
         v-if="actionPlan && !actionPlan.error"
         :plan="actionPlan"
         @close="actionPlan = null"
-        @approve="actionPlan = null"
+        @approve="approveActionPlan"
       />
     </template>
   </aside>
