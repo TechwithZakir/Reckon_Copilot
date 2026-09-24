@@ -33,12 +33,6 @@ class ActionExecutionError(RuntimeError):
     """Raised when an approved action cannot be applied safely."""
 
 
-SAME_TARGET_MESSAGE = (
-    "This action belongs to the same Form and record that created the preview. "
-    "Open that DocType and document, then prepare the action again. No ERP data was changed."
-)
-
-
 class AuditStore(Protocol):
     def find(self, plan_hash: str, user: str, site: str) -> dict[str, Any] | None:
         ...
@@ -135,7 +129,6 @@ def execute_approved_plan(
     user: str,
     site: str,
     secret: str,
-    current_context: dict[str, Any] | None = None,
     permission_adapter: PermissionAdapter | None = None,
     audit_store: AuditStore | None = None,
 ) -> dict[str, Any]:
@@ -145,7 +138,6 @@ def execute_approved_plan(
     permission boundary is called again immediately before mutation.
     """
     normalized = _validate_plan(plan)
-    assert_same_form_target(normalized, current_context)
     plan_hash = normalized["plan_hash"]
     expected_hash = stable_hash(canonical_json({key: value for key, value in normalized.items() if key != "plan_hash"}))
     if expected_hash != plan_hash:
@@ -211,23 +203,6 @@ def execute_approved_plan(
         if isinstance(error, ActionExecutionError):
             raise
         raise ActionExecutionError("Action failed; no changes were committed.") from error
-
-
-def assert_same_form_target(plan: dict[str, Any], current_context: dict[str, Any] | None) -> None:
-    """Require execution from the exact Form target used by the preview."""
-    if not isinstance(current_context, dict) or current_context.get("page_type") != "Form":
-        raise ActionExecutionError(SAME_TARGET_MESSAGE)
-
-    target = plan.get("target") if isinstance(plan.get("target"), dict) else {}
-    expected_doctype = str(target.get("doctype") or "").strip()
-    current_doctype = str(current_context.get("doctype") or "").strip()
-    if not expected_doctype or expected_doctype != current_doctype:
-        raise ActionExecutionError(SAME_TARGET_MESSAGE)
-
-    expected_name = str(target.get("document_name") or "").strip()
-    current_name = str(current_context.get("document_name") or "").strip()
-    if expected_name and expected_name != current_name:
-        raise ActionExecutionError(SAME_TARGET_MESSAGE)
 
 
 def _validate_plan(plan: dict[str, Any]) -> dict[str, Any]:

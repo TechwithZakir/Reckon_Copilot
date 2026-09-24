@@ -158,13 +158,6 @@ as high-risk operations and verify that each still requires the same explicit
 approval plus final execution click. Do not use production records until backup,
 rollback and audit review procedures are approved.
 
-Navigate to another DocType or record after approval but before execution. The
-panel must refuse the action, explain that the original Form/document is
-required, and tell the user to open it and prepare the action again. No save,
-insert, submit, delete or workflow change should occur in this case. For a
-mutation error, verify that the transaction is rolled back and the audit record
-is marked failed.
-
 ## Suggested Actions Catalog Verification
 
 The catalog is complete before Phase 11 and remains read-only. Run the advisor

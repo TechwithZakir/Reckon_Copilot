@@ -137,12 +137,7 @@ transaction on mutation failure. Approval now rechecks the exact target before
 issuing a token, and preview/approval failures return panel-safe messages rather
 than Frappe error modals. No action is triggered by an ordinary question, and
 no action runs automatically from catalog refresh, feedback learning or the
-read-only Phase 11 agents. Approval and execution also require the live browser
-context to remain on the same Form and target document that created the plan.
-If the user navigates elsewhere, the action is rejected with a next-step message
-to open the original DocType/document and prepare the action again. A mutation
-failure rolls back the current transaction and records the failed audit state;
-navigation or permission mismatches never mutate data.
+read-only Phase 11 agents.
 
 ## Phase 9 Suggested Actions Catalog alignment
 

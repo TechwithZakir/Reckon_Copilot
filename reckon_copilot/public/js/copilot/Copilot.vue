@@ -224,7 +224,7 @@ function toggleQuestions() {
 async function approveActionPlan() {
   if (!actionPlan.value) return;
   try {
-    const result = await approvePreview(actionPlan.value, props.routeContext);
+    const result = await approvePreview(actionPlan.value);
     if (result?.approval_token) {
       actionApprovalToken.value = result.approval_token;
       actionPlan.value = {
@@ -240,21 +240,10 @@ async function approveActionPlan() {
   }
 }
 
-async function refreshActionPlan(values) {
-  if (!actionPlan.value || props.routeContext?.page_type !== "Form") return;
-  try {
-    const result = await previewAction(props.routeContext, actionPlan.value.action, values);
-    actionApprovalToken.value = "";
-    actionPlan.value = result?.plan || { error: result?.message || "The updated action preview is unavailable." };
-  } catch (error) {
-    actionPlan.value = { ...actionPlan.value, error: error.message || "The updated action preview is unavailable." };
-  }
-}
-
 async function executeApprovedAction() {
   if (!actionPlan.value || !actionApprovalToken.value) return;
   try {
-    const result = await executeAction(actionPlan.value, actionApprovalToken.value, props.routeContext);
+    const result = await executeAction(actionPlan.value, actionApprovalToken.value);
     if (!result?.ok) throw new Error(result?.message || "Action could not be completed.");
     actionPlan.value = null;
     actionApprovalToken.value = "";
@@ -598,7 +587,6 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
         @close="actionPlan = null"
         @approve="approveActionPlan"
         @execute="executeApprovedAction"
-        @replan="refreshActionPlan"
       />
     </template>
   </aside>
