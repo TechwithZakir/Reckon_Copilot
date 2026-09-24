@@ -96,6 +96,15 @@ privacy-safe aggregate feedback and the associated ranking/ingestion tests.
 These additions must reuse the existing context, knowledge, vector-search,
 cache and permission boundaries rather than introducing feature-local checks.
 
+The first catalog runtime slice is now implemented. Advisor candidates are
+deduplicated and ranked deterministically by priority, evidence source and
+semantic action type without server-side truncation. The Copilot panel shows a
+focused first viewport, then exposes functional independent expansion for
+additional Suggested Actions and Quick Questions. Expansion state resets when
+the authorized page context changes, and no new write capability is introduced.
+The ranking contract is covered by advisor tests and the UI remains compatible
+with older deployments because it consumes the existing advisor response.
+
 ## Phase 9 advisor relevance enhancement
 
 The Agent Advisor was strengthened using Frappe v16's native permission and metadata model. The implementation follows the documented behavior of `frappe.has_permission`, `frappe.get_meta`, permission-aware `frappe.db.get_list` and the document permission hooks described in the Frappe Framework documentation. Structural metadata is read only after route authorization and is reduced to safe signals: required field labels, field count, status/workflow presence, submit capability, report source DocType and compact dashboard/workspace counts. No document values, report rows, chart data or unrestricted workspace content are returned by the advisor.

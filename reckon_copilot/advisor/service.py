@@ -80,6 +80,45 @@ def get_advice(
     }
 
 
+def rank_recommendations(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rank eligible recommendations without imposing a result-count limit."""
+    priority_weight = {"high": 300, "normal": 200, "low": 100}
+    source_weight = {
+        "permission": 30,
+        "filter": 25,
+        "dashboard": 24,
+        "report": 22,
+        "doctype": 20,
+        "workspace": 16,
+        "context": 10,
+    }
+    action_weight = {"review": 8, "analyze": 7, "workflow": 6, "filter": 5, "navigate": 4, "help": 3}
+    unique: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("id") or item.get("title") or item.get("prompt") or "").strip()
+        if not key or key in unique:
+            continue
+        unique[key] = {
+            **item,
+            "_catalog_order": index,
+            "_rank_score": (
+                priority_weight.get(str(item.get("priority") or "normal"), 200)
+                + source_weight.get(str(item.get("source") or "context"), 10)
+                + action_weight.get(str(item.get("action_type") or ""), 0)
+            ),
+        }
+    ranked = sorted(
+        unique.values(),
+        key=lambda item: (-item["_rank_score"], item["_catalog_order"]),
+    )
+    return [
+        {key: value for key, value in item.items() if key not in {"_catalog_order", "_rank_score"}}
+        for item in ranked
+    ]
+
+
 def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any], family: str) -> list[dict[str, Any]]:
     label = _context_label(context)
     date_hint = _date_hint(metadata)
@@ -124,7 +163,7 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
                 "This page belongs to the Selling flow; follow-up is prioritized without exposing records outside the current scope.",
                 "context", priority="high", action_type="review",
             ))
-        return result[:4]
+        return rank_recommendations(result)
 
     if page_type == "Form":
         is_new = _is_new_document(context.get("document_name"))
@@ -181,7 +220,7 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
             "doctype" if metadata.get("has_workflow_state") or metadata.get("is_submittable") else "context",
             action_type="workflow",
         ))
-        return result[:4]
+        return rank_recommendations(result)
 
     if page_type == "Report":
         filters = _filters(context)
@@ -215,7 +254,7 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
                 f"The report definition identifies {metadata['ref_doctype']} as its source DocType.",
                 "report", action_type="analyze",
             ))
-        return result[:4]
+        return rank_recommendations(result)
 
     if page_type == "Dashboard":
         chart_titles = metadata.get("chart_titles") or []
@@ -254,11 +293,11 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
             "Dashboard interpretation should stay aligned with the current route filters and aggregate scope.",
             "filter" if _filters(context) else "context", action_type="filter",
         ))
-        return result[:4]
+        return rank_recommendations(result)
 
     if page_type == "Workspace":
         link_count = metadata.get("link_count")
-        return [
+        return rank_recommendations([
             _item(
                 f"What should I open first in {label}?",
                 f"{date_hint}recommend the most relevant next area in the {label} workspace based on today's work.",
@@ -273,10 +312,10 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
                 "Keep guidance limited to navigation that the current user can already see.",
                 "workspace", action_type="help",
             ),
-        ]
+        ])
 
     if page_type == "Homepage":
-        return [
+        return rank_recommendations([
             _item(
                 "Prepare my daily briefing",
                 f"{date_hint}prepare a concise briefing for the current user and company home context: priorities, notable signals, overdue work and the best next step.",
@@ -298,15 +337,15 @@ def _questions(page_type: str, context: dict[str, Any], metadata: dict[str, Any]
                 "Recommendations are limited to areas already visible to the current user.",
                 "workspace", action_type="navigate",
             ),
-        ]
+        ])
 
-    return [_item(
+    return rank_recommendations([_item(
         "What can I do on this page?",
         f"Explain useful next steps for {context.get('page_name') or 'this Desk page'}.",
         "page-help",
         "No richer page metadata was available, so Copilot is keeping the guidance general.",
         "context", action_type="help",
-    )]
+    )])
 
 
 def _actions(
@@ -321,14 +360,14 @@ def _actions(
     date_hint = _date_hint(metadata)
     if page_type == "Form" and _is_new_document(context.get("document_name")):
         if _can_action(context, "create", permission_adapter, user):
-            return [_item(
+            return rank_recommendations([_item(
                 f"Complete this {label} draft",
                 f"Identify missing information before saving this {label}.",
                 "draft-completion",
                 "This is a new form and the user has native create permission; approval is still required before any future insert.",
                 "permission", priority="high" if metadata.get("required_fields") else "normal",
                 action_type="create", requires_confirmation=True,
-            )]
+            )])
         return []
 
     if page_type == "Form":
@@ -362,7 +401,7 @@ def _actions(
                 "This DocType is submittable and native submit permission is available; execution remains disabled.",
                 "permission", priority="high", action_type="submit", requires_confirmation=True,
             ))
-        return result
+        return rank_recommendations(result)
 
     if page_type == "List":
         if family == "sales":
@@ -375,47 +414,47 @@ def _actions(
             title = f"Prepare focused {label} review"
             prompt = f"{date_hint}create a read-only review plan for the visible {label} records within the current permitted scope."
         filters = _filters(context)
-        return [_item(
+        return rank_recommendations([_item(
             title, prompt, "operational-review",
             _filter_reason(filters) if filters else "No filters are active; the review will stay within the full permitted list scope.",
             "filter" if filters else "context", priority="high" if filters else "normal", action_type="review",
-        )]
+        )])
 
     if page_type == "Report":
         filters = _filters(context)
-        return [_item(
+        return rank_recommendations([_item(
             "Prepare a focused report review",
             f"{date_hint}summarize the report scope, active filters, date range and the most useful next analysis.",
             "report-review",
             _filter_reason(filters) if filters else "A focused review is useful because the report has no active filters.",
             "filter" if filters else "report", priority="high" if not filters else "normal", action_type="analyze",
-        )]
+        )])
 
     if page_type == "Dashboard":
-        return [_item(
+        return rank_recommendations([_item(
             "Summarize visible dashboard signals",
             f"{date_hint}summarize the visible KPI cards and charts, call out meaningful values or empty states, and propose the next read-only review.",
             "dashboard-summary",
             metadata.get("dashboard_snapshot", {}).get("summary") or "This is a read-only review of the dashboard aggregates currently available to the user.",
             "dashboard", action_type="analyze",
-        )]
+        )])
 
     if page_type == "Workspace":
-        return [_item(
+        return rank_recommendations([_item(
             "Find the next workspace step",
             f"{date_hint}recommend the most relevant visible DocType, report or dashboard to open next.",
             "workspace-navigation",
             "Recommendations are limited to the current workspace navigation scope.",
             "workspace", action_type="navigate",
-        )]
+        )])
     if page_type == "Homepage":
-        return [_item(
+        return rank_recommendations([_item(
             "Prepare today's briefing",
             f"{date_hint}prepare a read-only daily briefing from the current user and company home context, including priorities and useful next areas.",
             "daily-briefing",
             "The home action is a read-only briefing; any future write action would require a separate approval flow.",
             "context", priority="high", action_type="analyze",
-        )]
+        )])
     return []
 
 

@@ -28,8 +28,12 @@ const advisorSummary = ref("");
 const models = ref([]);
 const selectedModel = ref("");
 const actionPlan = ref(null);
+const showAllActions = ref(false);
+const showAllQuestions = ref(false);
+const ACTION_PREVIEW_LIMIT = 5;
+const QUESTION_PREVIEW_LIMIT = 6;
 
-const actionItems = computed(() => {
+const allActionItems = computed(() => {
   const fromAdvisor = advisorActions.value.filter((item) => item?.title || item?.prompt);
   const fromInsights = insights.value.flatMap((item) => item.suggested_prompts || []);
   const defaults = [
@@ -54,11 +58,16 @@ const actionItems = computed(() => {
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
-    })
-    .slice(0, 5);
+    });
 });
 
-const contextualPrompts = computed(() => {
+const actionItems = computed(() =>
+  showAllActions.value ? allActionItems.value : allActionItems.value.slice(0, ACTION_PREVIEW_LIMIT),
+);
+
+const moreActionCount = computed(() => Math.max(0, allActionItems.value.length - ACTION_PREVIEW_LIMIT));
+
+const allContextualPrompts = computed(() => {
   const items = [...advisorQuestions.value, ...prompts.value];
   const seen = new Set();
   return items.filter((item) => {
@@ -66,8 +75,16 @@ const contextualPrompts = computed(() => {
     if (!label || seen.has(label)) return false;
     seen.add(label);
     return true;
-  }).slice(0, 6);
+  });
 });
+
+const contextualPrompts = computed(() =>
+  showAllQuestions.value
+    ? allContextualPrompts.value
+    : allContextualPrompts.value.slice(0, QUESTION_PREVIEW_LIMIT),
+);
+
+const moreQuestionCount = computed(() => Math.max(0, allContextualPrompts.value.length - QUESTION_PREVIEW_LIMIT));
 
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
@@ -175,6 +192,14 @@ function priorityLabel(priority) {
   return priority === "high" ? "High priority" : priority === "low" ? "Low priority" : "Recommended";
 }
 
+function toggleActions() {
+  showAllActions.value = !showAllActions.value;
+}
+
+function toggleQuestions() {
+  showAllQuestions.value = !showAllQuestions.value;
+}
+
 async function approveActionPlan() {
   if (!actionPlan.value) return;
   try {
@@ -212,6 +237,8 @@ async function updatePreferences(preferences) {
 }
 
 async function loadInsights() {
+  showAllActions.value = false;
+  showAllQuestions.value = false;
   if (!props.routeContext || props.routeContext.access_denied) {
     insights.value = [];
     notifications.value = [];
@@ -468,12 +495,25 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
               </span>
             </button>
           </div>
-          <button class="rc-link-button rc-more-button" type="button">
-            More suggestions
+          <button
+            v-if="moreActionCount > 0 || showAllActions"
+            class="rc-link-button rc-more-button"
+            type="button"
+            :aria-expanded="showAllActions"
+            @click="toggleActions"
+          >
+            {{ showAllActions ? "Show fewer suggestions" : `More suggestions (${moreActionCount})` }}
           </button>
         </section>
 
-        <SuggestedPrompts :prompts="contextualPrompts" @select="selectedPrompt = $event" />
+        <SuggestedPrompts
+          :prompts="contextualPrompts"
+          :expanded="showAllQuestions"
+          :has-more="moreQuestionCount > 0"
+          :more-count="moreQuestionCount"
+          @select="selectedPrompt = $event"
+          @toggle-more="toggleQuestions"
+        />
       </div>
 
       <div class="rc-panel-footer">

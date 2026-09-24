@@ -1,6 +1,11 @@
 <script setup>
-defineProps({ prompts: { type: Array, default: () => [] } });
-defineEmits(["select"]);
+defineProps({
+  prompts: { type: Array, default: () => [] },
+  expanded: { type: Boolean, default: false },
+  hasMore: { type: Boolean, default: false },
+  moreCount: { type: Number, default: 0 },
+});
+defineEmits(["select", "toggle-more"]);
 
 function promptLabel(prompt) {
   return typeof prompt === "string" ? prompt : prompt?.title || prompt?.prompt || "Question";
@@ -28,8 +33,14 @@ function promptValue(prompt) {
       >
         {{ promptLabel(prompt) }}
       </button>
-      <button class="rc-chip rc-chip-more" type="button" aria-label="More quick questions">
-        ...
+      <button
+        v-if="hasMore || expanded"
+        class="rc-chip rc-chip-more"
+        type="button"
+        :aria-expanded="expanded"
+        @click="$emit('toggle-more')"
+      >
+        {{ expanded ? "Show fewer" : `More (${moreCount})` }}
       </button>
     </div>
   </section>

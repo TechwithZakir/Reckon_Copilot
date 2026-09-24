@@ -1,11 +1,22 @@
 import unittest
 
 from reckon_copilot.permissions.boundary import CopilotPermissionBoundary
-from reckon_copilot.advisor.service import get_advice
+from reckon_copilot.advisor.service import get_advice, rank_recommendations
 from reckon_copilot.permissions.boundary import PermissionDenied, StaticPermissionAdapter
 
 
 class AdvisorTests(unittest.TestCase):
+    def test_recommendations_rank_by_priority_and_keep_all_eligible_items(self):
+        ranked = rank_recommendations([
+            {"id": "general", "title": "General help", "priority": "normal", "source": "context", "action_type": "help"},
+            {"id": "urgent", "title": "Review overdue records", "priority": "high", "source": "filter", "action_type": "review"},
+            {"id": "low", "title": "Learn more", "priority": "low", "source": "context", "action_type": "help"},
+            {"id": "extra", "title": "Explain the scope", "priority": "normal", "source": "report", "action_type": "analyze"},
+        ])
+
+        self.assertEqual([item["id"] for item in ranked], ["urgent", "extra", "general", "low"])
+        self.assertEqual(len(ranked), 4)
+
     def test_sales_order_list_advice_is_contextual(self):
         result = get_advice(
             {"page_type": "List", "doctype": "Sales Order", "filters": {}},
