@@ -82,6 +82,12 @@ class ContextNormalizationTests(unittest.TestCase):
         self.assertEqual(context["page_type"], "Workspace")
         self.assertEqual(context["workspace_name"], "Buying")
 
+    def test_homepage_context_adapter(self):
+        context = build_context(route=["Homepage", "Home"], page_type="Homepage")
+
+        self.assertEqual(context["page_type"], "Homepage")
+        self.assertEqual(context["homepage_name"], "Home")
+
     def test_workspace_slug_promotes_to_tree_doctype_when_exact_doctype_exists(self):
         context = build_context(route=["Workspace", "Customer Group"])
 

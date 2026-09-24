@@ -94,7 +94,7 @@ function titleCaseSlug(value) {
 function routeLabel(context) {
   const route = Array.isArray(context?.route) ? context.route : [];
   if (route[1]) return titleCaseSlug(route[1]);
-  if (route[0] && !["Form", "List", "Report", "Dashboard", "Workspace"].includes(route[0])) {
+  if (route[0] && !["Form", "List", "Report", "Dashboard", "Workspace", "Homepage"].includes(route[0])) {
     return titleCaseSlug(route[0]);
   }
   return "";

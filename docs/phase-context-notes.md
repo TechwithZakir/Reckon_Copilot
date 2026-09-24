@@ -205,3 +205,23 @@ requests, and its addition changes the canonical context fingerprint. Tests
 cover prompt metadata suppression, visible dashboard component extraction,
 Workspace fallback, linked-component permission filtering and dashboard-specific
 advisor recommendations.
+
+## Context-aware prompt contract
+
+The advisor now treats the following as separate user-facing processes:
+
+- **Homepage:** current site date, user/company briefing scope, precomputed insight prompts and next-area navigation.
+- **Form:** DocType, document identity, current workflow/status signals, required and relevant fields, plus Link and child-table structure.
+- **List:** DocType, active filters and available list signals such as search, sort and selected-row hints when supplied by Desk.
+- **Report:** report identity, source DocType, current filters, company and date-range analysis prompts.
+- **Dashboard:** dashboard identity, compact KPI/chart snapshot, active filters and aggregate-value explanations.
+- **Workspace:** visible workspace navigation and a recommended next area based on the current date and page purpose.
+
+Suggested prompts include an explicit site-date phrase such as `As of
+YYYY-MM-DD`, a concrete analysis goal and a page-specific next action. The
+provider receives `analysis_date` and the relevant compact snapshot, while
+internal permission labels remain outside the user-facing prompt.
+
+The Desk adapter uses `frappe.get_route()` as its route hint, but the server
+continues to canonicalize and authorize the resulting context before advisor,
+insight, knowledge or provider use.

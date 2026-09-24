@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from datetime import date
 from typing import Any
 
 from reckon_copilot.context.builders import fingerprint_context
@@ -27,17 +28,45 @@ def enrich_dashboard_context(
 ) -> dict[str, Any]:
     """Attach a fresh dashboard snapshot to an already authorized context."""
 
-    if context.get("page_type") != "Dashboard":
-        return context
-
-    snapshot = build_dashboard_snapshot(context, frappe_module, user=user)
-    if not snapshot:
-        return context
-
     enriched = dict(context)
-    enriched["dashboard_snapshot"] = snapshot
+    enriched["analysis_date"] = _site_today(frappe_module)
+    if context.get("page_type") == "Dashboard":
+        snapshot = build_dashboard_snapshot(context, frappe_module, user=user)
+        if snapshot:
+            enriched["dashboard_snapshot"] = snapshot
+    elif context.get("page_type") == "Homepage":
+        enriched["homepage_snapshot"] = _homepage_snapshot(frappe_module, user)
     enriched["fingerprint"] = fingerprint_context(enriched)
     return enriched
+
+
+def _site_today(frappe_module: Any) -> str:
+    try:
+        today = getattr(getattr(frappe_module, "utils", None), "today", None)
+        if callable(today):
+            value = today()
+            if value:
+                return str(value)[:20]
+    except Exception:
+        pass
+    return date.today().isoformat()
+
+
+def _homepage_snapshot(frappe_module: Any, user: str | None) -> dict[str, Any]:
+    company = ""
+    try:
+        defaults = getattr(frappe_module, "defaults", None)
+        getter = getattr(defaults, "get_user_default", None)
+        if callable(getter):
+            company = str(getter("Company") or "")[:MAX_TEXT]
+    except Exception:
+        company = ""
+    return {
+        "title": "Home",
+        "user": str(user or "")[:MAX_TEXT],
+        "company": company,
+        "summary": "Daily briefing scope for the current user and company defaults.",
+    }
 
 
 def build_dashboard_snapshot(

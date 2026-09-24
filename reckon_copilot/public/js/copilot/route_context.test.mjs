@@ -24,13 +24,13 @@ function textNode(textContent) {
   return { textContent };
 }
 
-test("desk home is normalized as workspace home", () => {
+test("desk home is normalized as homepage context", () => {
   setDeskPath("/desk");
 
   const route = getCanonicalRoute([]);
 
-  assert.deepEqual(route, ["Workspace", "Home"]);
-  assert.equal(getPageType(route), "Workspace");
+  assert.deepEqual(route, ["Homepage", "Home"]);
+  assert.equal(getPageType(route), "Homepage");
 });
 
 test("dashboard-view route is normalized as dashboard", () => {

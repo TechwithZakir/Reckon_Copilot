@@ -62,7 +62,7 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
   const slug = deskParts[0] || "";
 
   if (deskParts.length === 0) {
-    return ["Workspace", "Home"];
+    return ["Homepage", "Home"];
   }
 
   if (slug === "dashboard-view") {
@@ -93,7 +93,7 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
   }
 
   const routeType = rawRoute[0];
-  if (["Form", "List", "Report", "Dashboard", "Workspace"].includes(routeType)) {
+  if (["Form", "List", "Report", "Dashboard", "Workspace", "Homepage"].includes(routeType)) {
     return rawRoute;
   }
 
@@ -112,7 +112,7 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
 
 export function getPageType(route = getRoute()) {
   const routeType = route[0];
-  if (["Form", "List", "Report", "Dashboard", "Workspace"].includes(routeType)) {
+  if (["Form", "List", "Report", "Dashboard", "Workspace", "Homepage"].includes(routeType)) {
     return routeType;
   }
   return "Page";

@@ -7,7 +7,7 @@ from typing import Any
 
 
 CONTEXT_VERSION = "v1"
-SUPPORTED_ROUTE_TYPES = {"Form", "List", "Report", "Dashboard", "Workspace"}
+SUPPORTED_ROUTE_TYPES = {"Form", "List", "Report", "Dashboard", "Workspace", "Homepage"}
 MAX_ROUTE_PARTS = 8
 MAX_VALUE_LENGTH = 160
 MAX_FILTERS = 20
@@ -160,6 +160,14 @@ def _workspace_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[
     }
 
 
+def _homepage_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "page_type": "Homepage",
+        "homepage_name": parts[1] if len(parts) > 1 else "Home",
+        "filters": filters,
+    }
+
+
 def _page_context(parts: tuple[str, ...], filters: dict[str, Any]) -> dict[str, Any]:
     return {
         "page_type": "Page",
@@ -174,6 +182,7 @@ ADAPTERS = {
     "Report": _report_context,
     "Dashboard": _dashboard_context,
     "Workspace": _workspace_context,
+    "Homepage": _homepage_context,
     "Page": _page_context,
 }
 

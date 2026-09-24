@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from typing import Any
 
 from reckon_copilot.advisor.service import get_advice
-from reckon_copilot.context.dashboard import build_dashboard_snapshot
+from reckon_copilot.context.dashboard import build_dashboard_snapshot, enrich_dashboard_context
 from reckon_copilot.permissions.boundary import (
     FrappePermissionAdapter,
     PermissionDenied,
@@ -29,6 +30,7 @@ def get_agent_advice(context: dict[str, Any] | str | None = None) -> dict[str, A
         import frappe  # type: ignore
         adapter = FrappePermissionAdapter(frappe)
         authorized = authorize_context(payload, user=frappe.session.user, adapter=adapter).context
+        authorized = enrich_dashboard_context(authorized, frappe, user=frappe.session.user)
         dashboard_snapshot = build_dashboard_snapshot(
             authorized,
             frappe,
@@ -58,7 +60,7 @@ def _safe_page_metadata(
     workspace content are never returned.
     """
     page_type = context.get("page_type")
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = {"current_date": _current_date(frappe)}
     if page_type in {"Form", "List"} and context.get("doctype"):
         try:
             meta = frappe.get_meta(context["doctype"])
@@ -82,6 +84,24 @@ def _safe_page_metadata(
                     "module": getattr(meta, "module", None),
                     "title_field": getattr(meta, "title_field", None),
                     "is_tree": bool(getattr(meta, "is_tree", False)),
+                    "link_fields": [
+                        {
+                            "label": str(getattr(field, "label", None) or getattr(field, "fieldname", ""))[:80],
+                            "fieldname": str(getattr(field, "fieldname", ""))[:80],
+                            "target": str(getattr(field, "options", None) or "")[:80],
+                        }
+                        for field in fields
+                        if getattr(field, "fieldtype", "") in {"Link", "Dynamic Link"}
+                    ][:10],
+                    "table_fields": [
+                        {
+                            "label": str(getattr(field, "label", None) or getattr(field, "fieldname", ""))[:80],
+                            "fieldname": str(getattr(field, "fieldname", ""))[:80],
+                            "target": str(getattr(field, "options", None) or "")[:80],
+                        }
+                        for field in fields
+                        if getattr(field, "fieldtype", "") in {"Table", "Table MultiSelect"}
+                    ][:8],
                 }
             )
         except Exception:
@@ -115,6 +135,11 @@ def _safe_page_metadata(
                 for item in snapshot.get("number_cards") or []
                 if item.get("title")
             ][:8]
+    elif page_type == "Homepage":
+        snapshot = context.get("homepage_snapshot")
+        if isinstance(snapshot, dict):
+            metadata["homepage_snapshot"] = snapshot
+        metadata["briefing_scope"] = "user and company home context"
     elif page_type == "Workspace" and context.get("workspace_name"):
         try:
             workspace = frappe.get_doc("Workspace", context["workspace_name"])
@@ -123,3 +148,13 @@ def _safe_page_metadata(
         except Exception:
             pass
     return metadata
+
+
+def _current_date(frappe: Any) -> str:
+    try:
+        today = getattr(getattr(frappe, "utils", None), "today", None)
+        if callable(today):
+            return str(today())[:20]
+    except Exception:
+        pass
+    return date.today().isoformat()

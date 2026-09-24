@@ -154,6 +154,20 @@ class AdvisorTests(unittest.TestCase):
         self.assertTrue(any("Stock Value by Item Group" in item["title"] for item in result["questions"]))
         self.assertTrue(any(item["category"] == "dashboard-summary" for item in result["questions"]))
 
+    def test_homepage_advice_is_date_aware_and_actionable(self):
+        result = get_advice(
+            {"page_type": "Homepage", "homepage_name": "Home", "filters": {}},
+            metadata={
+                "current_date": "2026-09-24",
+                "briefing_scope": "user and company home context",
+            },
+            permission_adapter=StaticPermissionAdapter(),
+        )
+
+        self.assertIn("2026-09-24", result["page_summary"])
+        self.assertTrue(any(item["category"] == "daily-briefing" for item in result["questions"]))
+        self.assertIn("2026-09-24", result["questions"][0]["prompt"])
+
     def test_restricted_context_cannot_receive_advice(self):
         with self.assertRaises(PermissionDenied):
             get_advice({"page_type": "List", "doctype": "Salary Slip"}, permission_adapter=StaticPermissionAdapter())

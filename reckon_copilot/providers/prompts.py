@@ -23,6 +23,8 @@ ALLOWED_CONTEXT_KEYS = {
     "view_type",
     "filters",
     "dashboard_snapshot",
+    "homepage_snapshot",
+    "analysis_date",
 }
 
 
@@ -50,7 +52,9 @@ def build_compact_prompt(
         "are implementation details, not page content; never mention them. "
         "When dashboard_snapshot is present, summarize its visible KPI cards, "
         "charts, filters and aggregate values directly, and say when a value is "
-        "unavailable. Return only "
+        "unavailable. Treat analysis_date as the current site date and use it "
+        "when interpreting due dates, aging, trends or today-focused questions. "
+        "Return only "
         f"JSON matching {ANSWER_SCHEMA_VERSION}: answer, confidence, evidence_ids, "
         "followups, warnings."
     )

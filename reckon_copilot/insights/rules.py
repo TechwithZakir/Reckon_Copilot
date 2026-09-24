@@ -17,14 +17,11 @@ def context_findings(context: dict[str, Any]) -> list[InsightFinding]:
     findings = [
         InsightFinding(
             title=f"{page_type} context ready",
-            summary=f"Copilot is using sanitized, permission-authorized context for {label}.",
+            summary=f"The {label} page is ready for focused, page-aware analysis.",
             severity="info",
             source="context",
             confidence="high",
-            suggested_prompts=(
-                "Explain this page",
-                "What should I review?",
-            ),
+            suggested_prompts=_context_prompts(context),
         )
     ]
 
@@ -77,7 +74,53 @@ def context_findings(context: dict[str, Any]) -> list[InsightFinding]:
             )
         )
 
+    if page_type == "Dashboard":
+        snapshot = context.get("dashboard_snapshot") if isinstance(context.get("dashboard_snapshot"), dict) else {}
+        findings.append(
+            InsightFinding(
+                title="Dashboard briefing ready",
+                summary=str(snapshot.get("summary") or f"The {label} dashboard is ready for metric and chart analysis."),
+                severity="info",
+                source="dashboard",
+                confidence="high",
+                suggested_prompts=(
+                    f"Summarize the {label} dashboard",
+                    f"Which {label} metric needs attention first?",
+                ),
+            )
+        )
+
+    if page_type == "Homepage":
+        findings.append(
+            InsightFinding(
+                title="Daily briefing ready",
+                summary="The home context is ready for a current-date user and company briefing.",
+                severity="info",
+                source="context",
+                confidence="medium",
+                suggested_prompts=("Prepare my daily briefing", "What should I prioritize today?"),
+            )
+        )
+
     return findings
+
+
+def _context_prompts(context: dict[str, Any]) -> tuple[str, ...]:
+    page_type = str(context.get("page_type") or "Page")
+    label = _context_label(context)
+    if page_type == "Form":
+        return (f"What should I review on this {label}?", "Explain the next workflow step")
+    if page_type == "List":
+        return (f"Which {label} records need attention?", f"Which filters would improve this {label} review?")
+    if page_type == "Report":
+        return (f"What is this {label} report telling me?", "Which report filters should I add first?")
+    if page_type == "Dashboard":
+        return (f"Summarize the {label} dashboard", f"Which {label} metric needs attention first?")
+    if page_type == "Workspace":
+        return (f"What should I open first in {label}?", "Explain this workspace")
+    if page_type == "Homepage":
+        return ("Prepare my daily briefing", "What should I prioritize today?")
+    return ("Explain this page", "What should I review?")
 
 
 def evidence_findings(evidence: list[dict[str, Any]] | None) -> list[InsightFinding]:
@@ -119,6 +162,7 @@ def _context_label(context: dict[str, Any]) -> str:
         or context.get("report_name")
         or context.get("dashboard_name")
         or context.get("workspace_name")
+        or context.get("homepage_name")
         or context.get("page_name")
         or "this Desk page"
     )

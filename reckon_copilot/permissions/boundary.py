@@ -441,6 +441,9 @@ class CopilotPermissionBoundary:
         if page_type == "Page":
             return
 
+        if page_type == "Homepage":
+            return
+
         raise PermissionDenied("Unsupported context page type")
 
     def redact_context(self, context: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, ...]]:
