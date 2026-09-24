@@ -733,6 +733,31 @@
   box-shadow: 0 0 0 3px rgb(47 128 255 / 8%);
 }
 
+.rc-composer-box {
+  position: relative;
+  gap: 8px;
+  padding: 10px 12px 10px 10px;
+  border: 1px solid #9fc4ff;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(47 128 255 / 8%), 0 8px 24px rgb(35 75 120 / 8%);
+}
+
+.rc-model-select {
+  align-self: flex-start;
+  min-width: 108px;
+  max-width: 150px;
+  height: 28px;
+  padding: 0 24px 0 9px;
+  border: 1px solid #d6e5fa;
+  border-radius: 8px;
+  background: #f6f9fe;
+  color: #2b527e;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .rc-composer-box textarea {
   min-width: 0;
   flex: 1;
@@ -743,6 +768,12 @@
   font: inherit;
   font-size: 12px;
   outline: none;
+}
+
+.rc-composer-box textarea {
+  min-height: 38px;
+  padding: 5px 2px;
+  line-height: 1.45;
 }
 
 .rc-composer-box textarea::placeholder {

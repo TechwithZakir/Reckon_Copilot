@@ -30,6 +30,8 @@ The provider contract now includes an administrator-managed `Allowed Models` all
 
 The Phase 9 UI now receives the validated model list from the server and sends the selected model with each ask/stream request. The provider manager re-validates the selection before calling the LLM, and the selected model remains part of the permission-safe cache identity.
 
+The Phase 9 Copilot composer was visually refined with a compact model control, cleaner input hierarchy and deduplicated contextual recommendations so Actions and Quick Questions do not repeat the same prompts.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.

@@ -30,13 +30,14 @@ const actionPrompts = computed(() => {
   const fromAdvisor = advisorActions.value.map((item) => item.title || item.prompt).filter(Boolean);
   const fromInsights = insights.value.flatMap((item) => item.suggested_prompts || []);
   const defaults = ["Explain this page", "What should I review?", "Which filters may help?"];
-  return [...new Set([...fromAdvisor, ...fromInsights, ...defaults])].slice(0, 4);
+  const values = [...new Set([...fromAdvisor, ...fromInsights])];
+  return (values.length ? values : defaults).slice(0, 4);
 });
 
-const contextualPrompts = computed(() => [
+const contextualPrompts = computed(() => [...new Set([
   ...advisorQuestions.value.map((item) => item.title || item.prompt).filter(Boolean),
   ...prompts.value,
-]);
+])].slice(0, 6));
 
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
