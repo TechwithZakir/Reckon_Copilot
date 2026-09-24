@@ -98,5 +98,8 @@ DocType. Verify a Form recommendation requires separate approval and
 execution clicks, a changed plan is rejected, native permission is checked
 again at execution time, failed writes show a panel-safe message, repeated
 requests are idempotent, and the audit record is visible under the Reckon
-Copilot workspace. Do not test against production records until a staging
-backup and rollback procedure are available.
+Copilot workspace. Ask a dashboard or homepage question that returns a
+structured briefing and verify the conversation shows a readable title,
+summary and sections rather than a raw object dump. Do not test against
+production records until a staging backup and rollback procedure are
+available.

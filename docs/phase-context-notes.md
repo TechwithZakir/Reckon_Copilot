@@ -67,6 +67,28 @@ language and does not execute imports or migrations. Those workflows require
 their own dry-run plans, row-level validation, dependency handling and
 approval scopes before they can be enabled.
 
+## Phase 10 completion
+
+Phase 10 is complete for the controlled, approval-gated execution slice. The
+executor supports explicit Form plans for create, update, delete, submit and
+approve operations with plan-hash validation, short-lived user/site-bound
+approval tokens, a second native Frappe permission check immediately before
+mutation, protected-field validation, idempotency, rollback handling and
+`Copilot Action Audit` records. The panel keeps approval and execution as two
+separate user actions and reports failures inside Copilot.
+
+The Phase 10 response experience is also complete for non-technical users.
+Provider answers that contain a dashboard or homepage briefing as JSON or a
+Python-style literal are parsed without evaluation and rendered as a readable
+title, summary, details, next areas, KPI/chart sections and filters. Ordinary
+prose remains ordinary prose, and the provider prompt now requires human-
+readable answer text. This presentation fallback protects the UI while older
+or less instruction-following providers are being replaced.
+
+Natural-language field inference, invoice/document import and large-file data
+migration remain later phases because they need separate dry-run plans,
+dependency validation and approval scopes.
+
 ## Phase 9 Suggested Actions Catalog alignment
 
 `Reckon_Copilot_Suggested_Actions_Catalog.md` is now the product reference for

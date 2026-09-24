@@ -2,6 +2,7 @@
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 import { askCopilotStream } from "./api";
+import { formatAnswer } from "./answer_format.mjs";
 import { canAsk, normalizeAskResponse } from "./chat_logic.mjs";
 
 const props = defineProps({
@@ -141,7 +142,10 @@ function applyStreamEvent(message, event) {
 function finishProgress(message, normalized, options = {}) {
   if (message.cancelled) return;
   const responseText = normalized.text || "No answer was found for this page context.";
+  const answer = formatAnswer(responseText);
   message.tone = normalized.tone || "normal";
+  message.answer = answer;
+  message.answerReady = !options.reveal;
   message.meta = {
     ...(normalized.meta || {}),
     stream: true,
@@ -156,9 +160,9 @@ function finishProgress(message, normalized, options = {}) {
   };
   message.progress.label = "Completed";
   if (options.reveal) {
-    typeAnswer(message, responseText);
+    typeAnswer(message, answer.plainText || responseText);
   } else {
-    message.text = responseText;
+    message.text = answer.plainText || responseText;
     message.meta.tokens = estimateTokens(message.text);
   }
 }
@@ -178,6 +182,7 @@ function typeAnswer(message, text) {
     if (index >= text.length) {
       window.clearInterval(timer);
       typingTimers.delete(timer);
+      message.answerReady = true;
       nextTick(scrollConversationToEnd);
     }
   }, 18);
@@ -251,7 +256,25 @@ onBeforeUnmount(() => {
         class="rc-message"
         :class="[`is-${message.role}`, { 'is-warning': message.tone === 'warning' }]"
       >
-        <p>{{ message.text }}</p>
+        <template v-if="message.answerReady && message.answer?.kind === 'structured'">
+          <div class="rc-answer-content">
+            <h4>{{ message.answer.title }}</h4>
+            <p v-if="message.answer.summary" class="rc-answer-summary">{{ message.answer.summary }}</p>
+            <dl v-if="message.answer.details?.length" class="rc-answer-details">
+              <div v-for="detail in message.answer.details" :key="`${detail.label}-${detail.value}`">
+                <dt>{{ detail.label }}</dt>
+                <dd>{{ detail.value }}</dd>
+              </div>
+            </dl>
+            <section v-for="section in message.answer.sections" :key="section.title" class="rc-answer-section">
+              <h5>{{ section.title }}</h5>
+              <ul>
+                <li v-for="item in section.items" :key="item">{{ item }}</li>
+              </ul>
+            </section>
+          </div>
+        </template>
+        <p v-else>{{ message.text }}</p>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
           <div class="rc-progress-line">
             <span class="rc-progress-spinner" aria-hidden="true"></span>
