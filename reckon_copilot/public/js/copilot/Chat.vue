@@ -1,17 +1,18 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
-import { askCopilotStream } from "./api";
+import { askCopilotStream, runAnalytics } from "./api";
 import { formatAnswer } from "./answer_format.mjs";
-import { canAsk, normalizeAskResponse } from "./chat_logic.mjs";
+import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse } from "./chat_logic.mjs";
 
 const props = defineProps({
   initialPrompt: { type: String, default: "" },
   routeContext: { type: Object, default: null },
   models: { type: Array, default: () => [] },
   selectedModel: { type: String, default: "" },
+  agentMode: { type: String, default: "copilot" },
 });
-const emit = defineEmits(["update:selectedModel"]);
+const emit = defineEmits(["update:selectedModel", "update:agentMode"]);
 const draft = ref(props.initialPrompt);
 const messages = ref([]);
 const isSending = ref(false);
@@ -24,6 +25,12 @@ const progressStages = [
   "Searching approved knowledge",
   "Contacting LLM provider",
   "Composing response",
+];
+const analyticsStages = [
+  "Reading page context",
+  "Checking permissions",
+  "Running bounded analysis",
+  "Preparing results",
 ];
 
 watch(() => props.initialPrompt, (value) => {
@@ -41,15 +48,20 @@ async function send() {
   draft.value = "";
   isSending.value = true;
   try {
-    const response = await askCopilotStream({
-      requestId,
-      question,
-      context: props.routeContext,
-      selectedModel: props.selectedModel,
-      onEvent: (event) => applyStreamEvent(assistantMessage, event),
-    });
+    const response = props.agentMode === "analytics"
+      ? await runAnalytics(question, props.routeContext)
+      : await askCopilotStream({
+        requestId,
+        question,
+        context: props.routeContext,
+        selectedModel: props.selectedModel,
+        onEvent: (event) => applyStreamEvent(assistantMessage, event),
+      });
     if (!assistantMessage.streamDone) {
-      finishProgress(assistantMessage, normalizeAskResponse(response), { reveal: true });
+      const normalized = props.agentMode === "analytics"
+        ? normalizeAnalyticsResponse(response)
+        : normalizeAskResponse(response);
+      finishProgress(assistantMessage, normalized, { reveal: props.agentMode !== "analytics" });
     }
   } catch (error) {
     finishProgress(
@@ -67,6 +79,7 @@ async function send() {
 }
 
 function createProgressMessage() {
+  const analytics = props.agentMode === "analytics";
   return {
     role: "assistant",
     tone: "normal",
@@ -74,14 +87,14 @@ function createProgressMessage() {
     progress: {
       active: true,
       stageIndex: 0,
-      stages: progressStages,
+      stages: analytics ? analyticsStages : progressStages,
       startedAt: Date.now(),
       elapsed: "0s",
       percent: 8,
     },
     meta: {
-      provider: "LLM provider",
-      stream: true,
+      provider: analytics ? "Analytics Agent" : "LLM provider",
+      stream: !analytics,
     },
     streamDone: false,
   };
@@ -108,7 +121,7 @@ function startProgress(message) {
 function applyStreamEvent(message, event) {
   if (message.cancelled) return;
   if (event.event === "stage") {
-    const stageIndex = progressStages.indexOf(event.stage);
+    const stageIndex = message.progress.stages.indexOf(event.stage);
     if (stageIndex >= 0) {
       message.progress.stageIndex = stageIndex;
     }
@@ -146,15 +159,16 @@ function finishProgress(message, normalized, options = {}) {
   message.tone = normalized.tone || "normal";
   message.answer = answer;
   message.answerReady = !options.reveal;
+  message.analytics = normalized.meta?.analytics || null;
   message.meta = {
     ...(normalized.meta || {}),
-    stream: true,
+    stream: Boolean(message.meta?.stream),
     tokens: message.meta?.tokens || estimateTokens(message.text || responseText),
   };
   message.progress = {
     ...(message.progress || {}),
     active: false,
-    stageIndex: progressStages.length - 1,
+    stageIndex: (message.progress?.stages || progressStages).length - 1,
     elapsed: message.progress?.elapsed || "0s",
     percent: 100,
   };
@@ -169,6 +183,15 @@ function finishProgress(message, normalized, options = {}) {
 
 function estimateTokens(text) {
   return Math.max(1, Math.ceil(String(text || "").length / 4));
+}
+
+function chartBarWidth(chart, index) {
+  const values = chart?.datasets?.[0]?.data || [];
+  const numeric = values.map((value) => Number(value)).filter((value) => Number.isFinite(value));
+  const current = Number(values[index]);
+  if (!Number.isFinite(current) || !numeric.length) return "0%";
+  const maximum = Math.max(...numeric.map((value) => Math.abs(value)), 1);
+  return `${Math.max(4, Math.round((Math.abs(current) / maximum) * 100))}%`;
 }
 
 function typeAnswer(message, text) {
@@ -232,6 +255,24 @@ onBeforeUnmount(() => {
   <section class="rc-composer-shell" aria-labelledby="rc-chat-title">
     <div class="rc-chat-toolbar">
       <h3 id="rc-chat-title">Conversation</h3>
+      <div class="rc-agent-mode" role="group" aria-label="Choose agent">
+        <button
+          type="button"
+          :class="{ 'is-active': agentMode === 'copilot' }"
+          :aria-pressed="agentMode === 'copilot'"
+          @click="emit('update:agentMode', 'copilot')"
+        >
+          Copilot
+        </button>
+        <button
+          type="button"
+          :class="{ 'is-active': agentMode === 'analytics' }"
+          :aria-pressed="agentMode === 'analytics'"
+          @click="emit('update:agentMode', 'analytics')"
+        >
+          Analytics
+        </button>
+      </div>
       <button
         v-if="isSending"
         class="rc-clear-chat rc-cancel-chat"
@@ -275,6 +316,40 @@ onBeforeUnmount(() => {
           </div>
         </template>
         <p v-else>{{ message.text }}</p>
+        <div v-if="message.analytics" class="rc-analytics-result">
+          <div v-if="message.analytics.metrics?.length" class="rc-analytics-metrics">
+            <span v-for="metric in message.analytics.metrics" :key="`${metric.label}-${metric.value}`">
+              <small>{{ metric.label }}</small>
+              <strong>{{ metric.value }}</strong>
+            </span>
+          </div>
+          <table v-if="message.analytics.table?.rows?.length" class="rc-analytics-table">
+            <thead>
+              <tr>
+                <th v-for="column in message.analytics.table.columns" :key="column.key">{{ column.label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, rowIndex) in message.analytics.table.rows" :key="rowIndex">
+                <td v-for="column in message.analytics.table.columns" :key="column.key">{{ row[column.key] }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div
+            v-if="message.analytics.chart?.labels?.length && message.analytics.chart?.datasets?.length"
+            class="rc-analytics-chart"
+            role="img"
+            :aria-label="message.analytics.chart.title"
+          >
+            <strong>{{ message.analytics.chart.title }}</strong>
+            <div v-for="(label, chartIndex) in message.analytics.chart.labels" :key="`${label}-${chartIndex}`" class="rc-chart-row">
+              <span>{{ label }}</span>
+              <i><b :style="{ width: chartBarWidth(message.analytics.chart, chartIndex) }"></b></i>
+              <em>{{ message.analytics.chart.datasets[0].data[chartIndex] }}</em>
+            </div>
+          </div>
+          <small class="rc-analytics-source">Read-only analysis · {{ message.analytics.tool_label }}</small>
+        </div>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
           <div class="rc-progress-line">
             <span class="rc-progress-spinner" aria-hidden="true"></span>

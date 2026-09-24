@@ -39,6 +39,42 @@ export function normalizeAskResponse(response) {
   };
 }
 
+export function normalizeAnalyticsResponse(response) {
+  if (!response) {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: "Analytics did not return a result. Please try again.",
+    };
+  }
+  if (response.access_denied) {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: response.message || "Analytics cannot access this page with your current permissions.",
+    };
+  }
+  if (!response.ok) {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: response.message || "Analytics could not complete for this page.",
+    };
+  }
+  return {
+    role: "assistant",
+    tone: "normal",
+    text: response.narrative || "No analytical result was found for this page.",
+    meta: {
+      source: response.source || "Current page",
+      provider: "Analytics Agent",
+      model: "deterministic",
+      intent: response.intent,
+      analytics: response,
+    },
+  };
+}
+
 export function canAsk(question, context) {
   return Boolean(String(question || "").trim() && context && !context.access_denied);
 }

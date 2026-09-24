@@ -84,7 +84,7 @@ Manual verification on a Frappe bench should confirm Redis-backed cache access w
 
 ## Phase 10 Verification
 
-Run the standard checks plus executor coverage:
+Run the standard checks plus Analytics Agent coverage:
 
 ```powershell
 python -m unittest discover -s reckon_copilot\tests -p "test_*.py"
@@ -93,16 +93,17 @@ node --test reckon_copilot/public/js/copilot/*.test.mjs
 node scripts/validate_vue.mjs
 ```
 
-On a Frappe bench, migrate before testing the new `Copilot Action Audit`
-DocType. Verify a Form recommendation requires separate approval and
-execution clicks, a changed plan is rejected, native permission is checked
-again at execution time, failed writes show a panel-safe message, repeated
-requests are idempotent, and the audit record is visible under the Reckon
-Copilot workspace. Ask a dashboard or homepage question that returns a
-structured briefing and verify the conversation shows a readable title,
-summary and sections rather than a raw object dump. Do not test against
-production records until a staging backup and rollback procedure are
-available.
+On a Frappe bench, migrate before testing. Open a permitted List or Dashboard,
+choose `Analytics` in the conversation mode switch, and try a summary, a
+breakdown such as "show sales by customer", and a trend question. Verify the
+response contains a plain-language narrative, bounded metrics/table output
+and chart-ready visualization. Repeat as a restricted user and confirm the
+result stays inside Copilot without exposing data or showing a Frappe error.
+Switch back to `Copilot` and verify ordinary questions still use the normal
+provider path. Ask a dashboard or homepage question that returns a structured
+briefing and verify the conversation shows a readable title, summary and
+sections rather than a raw object dump. Do not test against production records
+until a staging backup and rollback procedure are available.
 
 If migration reports a missing `copilot_action_audit` module, confirm the app
 contains both `copilot_action_audit.py` and `__init__.py` beside the DocType

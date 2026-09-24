@@ -48,50 +48,49 @@ Phase 9 now issues short-lived HMAC approval tokens scoped to the exact plan has
 
 Phase 9 is complete. It delivers the contextual Agent Advisor, server-validated multi-model selection, preview-first action planning, permission-bound Form action previews, redacted plan values, deterministic plan hashes and short-lived signed approval tokens. The phase deliberately stops before ERPNext mutation: approved plans still return `execution: disabled`. Actual create, update, delete, submit and approve execution belongs to the next action-execution phase and must add native DocType permission checks, audit records, idempotency, transaction/error handling and rollback or compensation behavior.
 
-The next phase should implement the controlled executor only after those safeguards are designed and tested.
+The next phase is the separate read-only Analytics Agent. Controlled ERP
+actions remain a later phase and must not contaminate the lightweight Copilot
+path.
 
-## Phase 10 controlled executor starting point
+## Phase 10 analytics agent
 
-Phase 10 now has the first controlled execution slice. A plan can be
-executed only when its deterministic hash still matches, its short-lived HMAC
-approval token matches the current user and site, and the native Frappe action
-permission boundary authorizes the same target immediately before mutation.
-Create and update values are checked against DocType metadata and protected
-system fields are rejected. Failed mutations attempt a database rollback,
-repeated completed requests return an idempotent result, and every execution
-attempt is recorded in `Copilot Action Audit`.
+Phase 10 adds a separate, read-only Analytics Agent. The agent is reached
+through `reckon_copilot.api.analytics.run` and the `Analytics` mode in the
+Copilot conversation. Intent routing selects only one of three registered
+tools: current-page summary, grouped breakdown or time trend. User text is
+never converted into SQL, Python or an arbitrary tool name.
 
-The Copilot dialog separates `Approve action` from `Execute approved action`.
-The current executor intentionally does not infer field changes from natural
-language and does not execute imports or migrations. Those workflows require
-their own dry-run plans, row-level validation, dependency handling and
-approval scopes before they can be enabled.
+The service authorizes the canonical context with `analytics.run` before any
+data access. Frappe-backed analysis reads only allowlisted metadata fields via
+permission-aware ORM list access, caps the row count and output points, and
+returns a compact narrative, metrics, table and chart-ready dataset. Dashboard
+analysis uses the existing permission-scoped KPI/chart snapshot. The metrics
+engine uses Pandas when the bench provides it and a bounded Python fallback
+when it does not; callers do not change between engines.
+
+The panel defaults to the normal Copilot path, so basic questions stay on the
+lower-cost provider flow. Users can explicitly choose Analytics and see the
+bounded analysis progress, readable metrics/table output and chart bars. Each
+run is recorded through the existing usage logger with the analytics
+capability, selected tool, engine and duration.
 
 ## Phase 10 completion
 
-Phase 10 is complete for the controlled, approval-gated execution slice. The
-executor supports explicit Form plans for create, update, delete, submit and
-approve operations with plan-hash validation, short-lived user/site-bound
-approval tokens, a second native Frappe permission check immediately before
-mutation, protected-field validation, idempotency, rollback handling and
-`Copilot Action Audit` records. The panel keeps approval and execution as two
-separate user actions and reports failures inside Copilot.
+Phase 10 is complete. It delivers the separate Analytics Agent UI mode,
+allowlisted intent routing, permission-aware Frappe data access, bounded
+Python/Pandas metrics, chart-ready results, human-readable analysis
+narratives, execution limits and usage logging. The analytics tests cover
+summary relevance, breakdown and trend output, dashboard snapshots,
+permission boundaries, row limits and audit/usage records.
 
 The audit DocType package includes its standard Frappe controller module and
 package initializer, so bench migration can import
 `reckon_copilot.reckon_copilot.doctype.copilot_action_audit` successfully.
 
-The Phase 10 response experience is also complete for non-technical users.
-Provider answers that contain a dashboard or homepage briefing as JSON or a
-Python-style literal are parsed without evaluation and rendered as a readable
-title, summary, details, next areas, KPI/chart sections and filters. Ordinary
-prose remains ordinary prose, and the provider prompt now requires human-
-readable answer text. This presentation fallback protects the UI while older
-or less instruction-following providers are being replaced.
-
-Natural-language field inference, invoice/document import and large-file data
-migration remain later phases because they need separate dry-run plans,
-dependency validation and approval scopes.
+The human-readable response formatter remains part of the Copilot shell and
+keeps provider briefings usable for non-technical users. Controlled writes,
+invoice/document import and large-file migration remain later phases because
+they require separate approval, dependency and rollback boundaries.
 
 ## Phase 9 Suggested Actions Catalog alignment
 

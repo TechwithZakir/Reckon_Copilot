@@ -521,6 +521,38 @@
   min-height: 24px;
 }
 
+.rc-agent-mode {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+  border: 1px solid #d7e5f7;
+  border-radius: 8px;
+  background: #f4f8fd;
+}
+
+.rc-agent-mode button {
+  min-height: 23px;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #6a83a1;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rc-agent-mode button.is-active,
+.rc-agent-mode button:hover,
+.rc-agent-mode button:focus-visible {
+  background: #fff;
+  color: #1769d4;
+  box-shadow: 0 2px 7px rgb(35 75 120 / 10%);
+  outline: none;
+}
+
 .rc-chat-toolbar h3 {
   margin: 0;
   color: #10233f;
@@ -1165,7 +1197,111 @@
 
   .rc-context-pill {
     display: none;
-  }
+}
+
+.rc-analytics-result {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid #dce8f6;
+}
+
+.rc-analytics-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rc-analytics-metrics span {
+  display: grid;
+  gap: 2px;
+  padding: 6px 7px;
+  border-radius: 6px;
+  background: #f3f7fd;
+}
+
+.rc-analytics-metrics small {
+  color: #6b85a3;
+  font-size: 9px;
+}
+
+.rc-analytics-metrics strong {
+  color: #183b66;
+  font-size: 12px;
+}
+
+.rc-analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #31577f;
+  font-size: 10px;
+}
+
+.rc-analytics-table th,
+.rc-analytics-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #e6eef8;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.rc-analytics-table th {
+  color: #6b85a3;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rc-analytics-chart {
+  display: grid;
+  gap: 6px;
+}
+
+.rc-analytics-chart > strong {
+  color: #183b66;
+  font-size: 11px;
+}
+
+.rc-chart-row {
+  display: grid;
+  grid-template-columns: minmax(64px, 0.65fr) minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: #527192;
+  font-size: 10px;
+}
+
+.rc-chart-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-chart-row > i {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7f0fb;
+}
+
+.rc-chart-row > i b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f80ff, #16b7a3);
+}
+
+.rc-chart-row > em {
+  color: #183b66;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.rc-analytics-source {
+  color: #7890aa;
+  font-size: 9px;
 }
 
 @media (max-width: 640px) {

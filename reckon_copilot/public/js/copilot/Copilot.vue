@@ -27,6 +27,7 @@ const advisorActions = ref([]);
 const advisorSummary = ref("");
 const models = ref([]);
 const selectedModel = ref("");
+const agentMode = ref("copilot");
 const actionPlan = ref(null);
 const actionApprovalToken = ref("");
 const showAllActions = ref(false);
@@ -537,7 +538,15 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
       </div>
 
       <div class="rc-panel-footer">
-        <Chat :initial-prompt="selectedPrompt" :route-context="routeContext" :models="models" :selected-model="selectedModel" @update:selected-model="selectedModel = $event" />
+        <Chat
+          :initial-prompt="selectedPrompt"
+          :route-context="routeContext"
+          :models="models"
+          :selected-model="selectedModel"
+          :agent-mode="agentMode"
+          @update:selected-model="selectedModel = $event"
+          @update:agent-mode="agentMode = $event"
+        />
         <div class="rc-runtime">
           <span><i aria-hidden="true"></i>Using LLM provider</span>
           <label v-if="models.length > 1" class="rc-runtime-model">

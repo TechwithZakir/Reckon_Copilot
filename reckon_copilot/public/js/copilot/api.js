@@ -84,6 +84,10 @@ export function getAgentAdvice(context) {
   return call("reckon_copilot.api.advisor.get_agent_advice", { context });
 }
 
+export function runAnalytics(question, context) {
+  return call("reckon_copilot.api.analytics.run", { question, context });
+}
+
 export function previewAction(context, action, values = {}) {
   return call("reckon_copilot.api.actions.preview_action", {
     context,
