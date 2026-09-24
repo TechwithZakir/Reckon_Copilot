@@ -40,6 +40,9 @@ class ProviderManager:
             raise ProviderDisabled("Requested LLM model is not enabled for this provider")
         return model
 
+    def available_models(self) -> list[str]:
+        return list(self.config.allowed_models or ((self.config.model,) if self.config.model else ()))
+
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         provider = self.providers.get(self.config.provider)
         if not provider:

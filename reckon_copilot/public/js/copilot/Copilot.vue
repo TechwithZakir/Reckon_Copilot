@@ -23,6 +23,8 @@ const insightCounts = ref({ critical: 1, warning: 1, info: 1 });
 const notifications = ref([]);
 const advisorQuestions = ref([]);
 const advisorActions = ref([]);
+const models = ref([]);
+const selectedModel = ref("");
 
 const actionPrompts = computed(() => {
   const fromAdvisor = advisorActions.value.map((item) => item.title || item.prompt).filter(Boolean);
@@ -118,6 +120,8 @@ async function loadConfiguration() {
   try {
     const config = await getShellConfig(props.pageType);
     prompts.value = config.suggested_prompts || [];
+    models.value = config.models || [];
+    selectedModel.value = selectedModel.value || models.value[0] || "";
     dispatch({ type: "configuration-loaded", preferences: config.preferences });
   } catch (error) {
     prompts.value = ["What can I do here?", "Show available help"];
@@ -391,7 +395,7 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
       </div>
 
       <div class="rc-panel-footer">
-        <Chat :initial-prompt="selectedPrompt" :route-context="routeContext" />
+        <Chat :initial-prompt="selectedPrompt" :route-context="routeContext" :models="models" :selected-model="selectedModel" @update:selected-model="selectedModel = $event" />
         <div class="rc-runtime">
           <span><i aria-hidden="true"></i>Using LLM provider</span>
           <span>Usage is shown per response</span>

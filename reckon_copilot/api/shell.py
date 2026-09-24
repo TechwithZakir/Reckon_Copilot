@@ -38,9 +38,16 @@ def _whitelist(**kwargs: Any):
 @_whitelist(allow_guest=False)
 def get_shell_config(page_type: str | None = None) -> dict[str, Any]:
     normalized_type = page_type if page_type in PROMPTS else "Page"
+    try:
+        from reckon_copilot.providers.manager import provider_config_from_frappe
+        provider = provider_config_from_frappe()
+        models = list(provider.allowed_models or ((provider.model,) if provider.model else ()))
+    except Exception:
+        models = []
     return {
         "preferences": get_preferences(),
         "suggested_prompts": PROMPTS[normalized_type],
+        "models": models,
     }
 
 

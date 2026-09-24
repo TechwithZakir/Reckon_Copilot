@@ -88,15 +88,16 @@ export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }
 
-export function askCopilot(question, context, evidence = []) {
+export function askCopilot(question, context, evidence = [], selectedModel = "") {
   return call("reckon_copilot.api.ask.ask", {
     question,
     context,
     evidence,
+    selected_model: selectedModel,
   });
 }
 
-export function askCopilotStream({ requestId, question, context, evidence = [], onEvent }) {
+export function askCopilotStream({ requestId, question, context, evidence = [], selectedModel = "", onEvent }) {
   const realtime = window.frappe?.realtime;
   const canStream = realtime && typeof realtime.on === "function" && typeof realtime.off === "function";
   if (!canStream) {
@@ -115,6 +116,7 @@ export function askCopilotStream({ requestId, question, context, evidence = [], 
     question,
     context,
     evidence,
+    selected_model: selectedModel,
   })
     .catch((error) => {
       if (isMissingMethodError(error)) {

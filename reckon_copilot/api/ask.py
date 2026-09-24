@@ -63,6 +63,7 @@ def ask_with_services(
     permission_adapter: PermissionAdapter | None = None,
     rag: RagOrchestrator | None = None,
     site: str = "default",
+    selected_model: str | None = None,
 ) -> AskResult:
     question = (question or "").strip()
     if not question:
@@ -80,6 +81,7 @@ def ask_with_services(
         evidence = rag.build_context(question, authorized, user or "user@example.com").as_prompt_context()
     logger = usage_logger or InMemoryUsageLogger()
     config = provider_manager.config
+    request_model = provider_manager.select_model(selected_model)
     prompt = build_compact_prompt(question, authorized, evidence, intent=intent)
 
     deterministic = answer_from_evidence(question, evidence)
@@ -111,7 +113,7 @@ def ask_with_services(
                 system_prompt=prompt.system_prompt,
                 capability=CAPABILITY_CALL_PROVIDER,
                 context=authorized,
-                model=config.model,
+                model=request_model,
                 timeout_seconds=config.timeout_seconds,
             )
         )
@@ -144,7 +146,7 @@ def ask_with_services(
         question=question,
         site=site,
         provider=config.provider,
-        model=config.model or "none",
+        model=request_model or "none",
         prompt_version=PROMPT_VERSION,
         data_version="knowledge-v1",
         extra={"evidence_ids": ",".join(_evidence_ids(evidence)), "intent": intent},
@@ -191,7 +193,7 @@ def ask_with_services(
                 metadata={
                     "provider": config.provider,
                     "base_url": config.base_url,
-                    "model": config.model,
+                    "model": request_model,
                     "stream_response": config.stream_response,
                     "timeout_seconds": config.timeout_seconds,
                     "retries": config.retries,
@@ -265,7 +267,7 @@ if frappe:
         )
 
     @frappe.whitelist()
-    def ask(question: str, route=None, filters=None, page_type: str | None = None, context=None, evidence=None):
+    def ask(question: str, route=None, filters=None, page_type: str | None = None, context=None, evidence=None, selected_model=None):
         import json
 
         try:
@@ -296,6 +298,7 @@ if frappe:
                     site=_frappe_site(frappe),
                 ),
                 site=_frappe_site(frappe),
+                selected_model=selected_model,
             )
             return result.as_dict()
         except PermissionDenied as error:
@@ -310,7 +313,7 @@ if frappe:
             }
 
     @frappe.whitelist()
-    def ask_stream(request_id: str, question: str, route=None, filters=None, page_type: str | None = None, context=None, evidence=None):
+    def ask_stream(request_id: str, question: str, route=None, filters=None, page_type: str | None = None, context=None, evidence=None, selected_model=None):
         import json
 
         try:
@@ -328,6 +331,7 @@ if frappe:
             _stream_publish(request_id, "stage", {"stage": "Reading page context", "percent": 10})
             user = getattr(frappe.session, "user", None)
             provider_manager = provider_manager_from_frappe(frappe)
+            request_model = provider_manager.select_model(selected_model)
             logger = FrappeUsageLogger(frappe)
             authorized = authorize_context(
                 context_payload,
@@ -371,7 +375,7 @@ if frappe:
                     "stage": "Contacting LLM provider",
                     "percent": 55,
                     "provider": config.provider,
-                    "model": config.model,
+                    "model": request_model,
                     "stream": config.stream_response,
                 },
             )
@@ -395,7 +399,7 @@ if frappe:
                     system_prompt=prompt.system_prompt,
                     capability=CAPABILITY_CALL_PROVIDER,
                     context=authorized,
-                    model=config.model,
+                    model=request_model,
                     timeout_seconds=config.timeout_seconds,
                 ),
                 on_token=on_token,

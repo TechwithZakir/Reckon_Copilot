@@ -28,6 +28,8 @@ Phase 9 implementation has started with a permission-bound Agent Advisor API and
 
 The provider contract now includes an administrator-managed `Allowed Models` allowlist. Server-side provider selection rejects any model not in that allowlist; the future Copilot selector must consume these validated options and never submit arbitrary browser model names.
 
+The Phase 9 UI now receives the validated model list from the server and sends the selected model with each ask/stream request. The provider manager re-validates the selection before calling the LLM, and the selected model remains part of the permission-safe cache identity.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.
