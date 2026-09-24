@@ -103,3 +103,7 @@ structured briefing and verify the conversation shows a readable title,
 summary and sections rather than a raw object dump. Do not test against
 production records until a staging backup and rollback procedure are
 available.
+
+If migration reports a missing `copilot_action_audit` module, confirm the app
+contains both `copilot_action_audit.py` and `__init__.py` beside the DocType
+JSON, then restart the bench processes before retrying migration.

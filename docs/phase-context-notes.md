@@ -77,6 +77,10 @@ mutation, protected-field validation, idempotency, rollback handling and
 `Copilot Action Audit` records. The panel keeps approval and execution as two
 separate user actions and reports failures inside Copilot.
 
+The audit DocType package includes its standard Frappe controller module and
+package initializer, so bench migration can import
+`reckon_copilot.reckon_copilot.doctype.copilot_action_audit` successfully.
+
 The Phase 10 response experience is also complete for non-technical users.
 Provider answers that contain a dashboard or homepage briefing as JSON or a
 Python-style literal are parsed without evaluation and rendered as a readable
