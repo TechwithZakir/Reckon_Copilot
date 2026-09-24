@@ -38,6 +38,8 @@ The runtime footer uses responsive alignment for provider and model controls. Pl
 
 Phase 9 now includes a preview-first action planner for create, update, delete, submit and approve intents. Plans are permission-bound, redact secret-like values, mark high-risk operations, require confirmation metadata and carry a deterministic plan hash. Execution remains disabled until the explicit approval and audit workflow is implemented.
 
+The frontend API boundary now exposes preview requests for the upcoming approval dialog. No execution endpoint is exposed; the next UI step must render the plan, risk and hash and require explicit approval before any future execution capability is enabled.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.
