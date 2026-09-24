@@ -24,6 +24,14 @@ The next planned phase should extend notifications into persistence, user dismis
 
 Phase 9 will add the Contextual Agent Advisor and Safe Action Planning layer. Its provider work must include a multi-model provider contract: administrators can configure an allowlisted set of models, the Copilot selector sends the selected model to the server, the server validates it against the active provider and capability policy, and the selected model is included in permission-safe cache identities and usage logs. The selector must never be cosmetic or allow arbitrary model names from the browser.
 
+## Later planned capabilities: approved actions and import workflows
+
+Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.
+
+Future document import phases will support uploading invoices or other business documents, extracting structured fields, mapping them to an approved target DocType, showing validation warnings and a draft preview, and inserting only after explicit approval. The original file, extracted values, confidence and final document linkage must be recorded without exposing unrestricted content to the provider.
+
+Future migration phases will support large-file uploads with streaming/chunked processing, permission-safe data cleansing, duplicate detection, field/type validation, dependency-aware related DocType creation, a dry-run summary and an import plan. The agent must show the proposed records, errors, skipped rows and relationships before execution, then request Codex-style explicit approval for the final migration. Approval must be scoped to the exact plan hash, target site, user, DocTypes and row set; any material change invalidates approval. Resume, rollback or compensation behavior and an audit trail are required before production use.
+
 ## UI refinement after Phase 8
 
 The Copilot panel now keeps urgent findings in Alerts and shows only supporting information findings under Key Insights, avoiding duplicate warnings. Suggested Actions are derived from returned insight prompts with concise fallbacks. Conversation responses explicitly show when no answer was found, and completed streamed requests display a 100% Completed progress state.
