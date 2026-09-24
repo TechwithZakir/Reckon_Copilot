@@ -104,6 +104,7 @@ def _sidebar_items():
         ("Copilot Suggestion Feedback", "DocType", "Copilot Suggestion Feedback", "", 1, "Link"),
         ("Copilot Catalog Candidate", "DocType", "Copilot Catalog Candidate", "", 1, "Link"),
         ("Copilot Suggested Action Template", "DocType", "Copilot Suggested Action Template", "", 1, "Link"),
+        ("Copilot Catalog Snapshot", "DocType", "Copilot Catalog Snapshot", "", 1, "Link"),
         ("Settings", "DocType", "", "settings", 0, "Section Break"),
         ("Copilot Provider", "DocType", "Copilot Provider", "", 1, "Link"),
         ("Copilot Usage Log", "DocType", "Copilot Usage Log", "", 1, "Link"),

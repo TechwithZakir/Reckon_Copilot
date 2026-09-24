@@ -143,6 +143,10 @@ After migration, verify the new administrator-only workspace links:
   versioned `Copilot Suggested Action Template`.
 - A non-administrator cannot publish a candidate, and an approved template
   remains read-only guidance that only starts a prompt.
+- Publishing creates a `Copilot Catalog Snapshot`; only its template manifest
+  is active at runtime. The Candidate list provides `Generate Candidates`, a
+  retired Snapshot form provides `Activate This Snapshot`, and rollback creates
+  a new published snapshot while preserving the previous history.
 
 The scheduled job is safe to run repeatedly: candidate generation is
 idempotent, and it never publishes templates or executes ERPNext writes.

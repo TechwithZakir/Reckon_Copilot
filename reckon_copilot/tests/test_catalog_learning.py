@@ -92,6 +92,42 @@ class CatalogLearningTests(unittest.TestCase):
         self.assertTrue(published.intent_type.startswith("read_only"))
         self.assertEqual(self.repository.list_candidates()[0].status, "APPROVED")
         self.assertEqual(self.repository.list_templates()[0].key, published.key)
+        snapshots = self.repository.list_snapshots()
+        self.assertEqual(len(snapshots), 1)
+        self.assertEqual(snapshots[0].status, "Published")
+        self.assertIn(published.key, snapshots[0].template_keys)
+
+    def test_snapshot_rollback_publishes_a_new_active_version(self):
+        first = AdvisorTemplate(
+            key="approved.first",
+            title="First",
+            prompt_template="Review {doctype}.",
+            category="review",
+            page_type="List",
+            action_type="review",
+            reason="First",
+            doctype="Sales Order",
+        )
+        second = AdvisorTemplate(
+            key="approved.second",
+            title="Second",
+            prompt_template="Explain {doctype}.",
+            category="review",
+            page_type="List",
+            action_type="question",
+            reason="Second",
+            doctype="Sales Order",
+        )
+        self.repository.save_template(first, approved_by="Administrator")
+        original = self.repository.publish_snapshot([first], source_candidate="first", published_by="Administrator")
+        self.repository.save_template(second, approved_by="Administrator")
+        self.repository.publish_snapshot([first, second], source_candidate="second", published_by="Administrator")
+
+        rollback = self.repository.rollback_snapshot(original.snapshot_key, published_by="Administrator")
+        self.assertIsNotNone(rollback)
+        self.assertEqual(rollback.rollback_of, original.snapshot_key)
+        self.assertEqual(rollback.template_keys, (first.key,))
+        self.assertEqual(len([item for item in self.repository.list_snapshots() if item.status == "Published"]), 1)
 
 
 if __name__ == "__main__":

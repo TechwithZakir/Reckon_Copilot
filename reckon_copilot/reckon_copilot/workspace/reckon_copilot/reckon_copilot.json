@@ -102,6 +102,16 @@
       "type": "Link"
     },
     {
+      "description": "Review published catalog versions and rollback history.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Catalog Snapshot",
+      "link_to": "Copilot Catalog Snapshot",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
       "description": "Manage user shell preferences.",
       "hidden": 0,
       "is_query_report": 0,
@@ -191,6 +201,15 @@
       "format": "{}",
       "label": "Ingestion Jobs",
       "link_to": "Copilot Knowledge Ingestion Job",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Blue",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Catalog Snapshots",
+      "link_to": "Copilot Catalog Snapshot",
       "stats_filter": "[]",
       "type": "DocType"
     },

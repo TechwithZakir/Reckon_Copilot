@@ -13,6 +13,15 @@ required_apps = ["frappe", "erpnext"]
 app_include_js = ["reckon_copilot_v2.bundle.js"]
 app_include_css = ["/assets/reckon_copilot/css/copilot_v2.css"]
 
+doctype_js = {
+    "Copilot Catalog Candidate": "public/js/catalog_learning_admin.js",
+    "Copilot Catalog Snapshot": "public/js/catalog_learning_admin.js",
+}
+
+doctype_list_js = {
+    "Copilot Catalog Candidate": "public/js/catalog_learning_admin.js",
+}
+
 add_to_apps_screen = [
     {
         "name": app_name,

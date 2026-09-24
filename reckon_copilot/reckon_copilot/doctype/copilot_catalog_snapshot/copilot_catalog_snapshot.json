@@ -1,0 +1,30 @@
+{
+  "actions": [],
+  "autoname": "field:snapshot_key",
+  "creation": "2026-09-24 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["snapshot_key", "version", "status", "template_count", "source_candidate", "published_by", "published_at", "rollback_of", "notes", "manifest_json"],
+  "fields": [
+    {"fieldname": "snapshot_key", "fieldtype": "Data", "label": "Snapshot Key", "reqd": 1, "unique": 1, "read_only": 1},
+    {"fieldname": "version", "fieldtype": "Data", "label": "Version", "read_only": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Draft\nPublished\nRetired", "read_only": 1},
+    {"fieldname": "template_count", "fieldtype": "Int", "label": "Template Count", "read_only": 1},
+    {"fieldname": "source_candidate", "fieldtype": "Data", "label": "Source Candidate", "read_only": 1},
+    {"fieldname": "published_by", "fieldtype": "Link", "label": "Published By", "options": "User", "read_only": 1},
+    {"fieldname": "published_at", "fieldtype": "Datetime", "label": "Published At", "read_only": 1},
+    {"fieldname": "rollback_of", "fieldtype": "Data", "label": "Rollback Of", "read_only": 1},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes", "read_only": 1},
+    {"fieldname": "manifest_json", "fieldtype": "Long Text", "label": "Published Manifest", "read_only": 1}
+  ],
+  "links": [],
+  "modified": "2026-09-24 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Reckon Copilot",
+  "name": "Copilot Catalog Snapshot",
+  "owner": "Administrator",
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}

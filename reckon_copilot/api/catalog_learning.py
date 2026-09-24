@@ -68,6 +68,12 @@ def generate_catalog_candidates() -> dict[str, Any]:
         catalog = default_catalog()
         adapter = FrappePermissionAdapter(frappe)
         candidates = generate_candidates(repository, catalog)
+        known = {candidate.candidate_key for candidate in candidates}
+        candidates.extend(
+            candidate
+            for candidate in repository.list_candidates()
+            if candidate.status == "PENDING" and candidate.candidate_key not in known
+        )
         validated = []
         for candidate in candidates:
             metadata = _installed_metadata(candidate.doctype, frappe)
@@ -117,6 +123,41 @@ def reject_catalog_candidate(candidate_key: str | None = None) -> dict[str, Any]
         return {"ok": True, "rejected": True}
     except Exception:
         return {"ok": False, "message": "Candidate rejection is temporarily unavailable."}
+
+
+@_whitelist(allow_guest=False)
+def list_catalog_snapshots() -> dict[str, Any]:
+    try:
+        import frappe  # type: ignore
+
+        if not _is_admin(frappe, frappe.session.user):
+            return {"ok": False, "message": "Administrator access is required.", "snapshots": []}
+        repository = FrappeCatalogLearningRepository(frappe)
+        snapshots = repository.list_snapshots()
+        return {
+            "ok": True,
+            "snapshots": [snapshot.as_dict() for snapshot in snapshots],
+            "active": next((snapshot.snapshot_key for snapshot in snapshots if snapshot.status == "Published"), ""),
+        }
+    except Exception:
+        return {"ok": False, "message": "Catalog snapshots are temporarily unavailable.", "snapshots": []}
+
+
+@_whitelist(allow_guest=False)
+def rollback_catalog_snapshot(snapshot_key: str | None = None) -> dict[str, Any]:
+    try:
+        import frappe  # type: ignore
+
+        user = frappe.session.user
+        if not _is_admin(frappe, user):
+            return {"ok": False, "message": "Only an administrator can roll back a snapshot."}
+        repository = FrappeCatalogLearningRepository(frappe)
+        snapshot = repository.rollback_snapshot(str(snapshot_key or ""), published_by=user)
+        if snapshot is None:
+            return {"ok": False, "message": "Snapshot was not found."}
+        return {"ok": True, "rolled_back": True, "snapshot": snapshot.as_dict()}
+    except Exception:
+        return {"ok": False, "message": "Snapshot rollback is temporarily unavailable."}
 
 
 def _is_admin(frappe: Any, user: str) -> bool:

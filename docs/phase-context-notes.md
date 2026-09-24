@@ -181,10 +181,14 @@ enabled, versioned, read-only `Copilot Suggested Action Template` and is
 merged into the advisor without changing its callers. Unsafe write action types
 are rejected at both candidate validation and runtime template loading.
 
-The new aggregate, candidate and approved-template DocTypes are available in
-the Reckon Copilot workspace and administrator sidebar. This completes the
-catalog's privacy-safe continuous-improvement boundary before Phase 11; it is
-controlled prompt improvement, not automatic model training.
+The new aggregate, candidate, approved-template and snapshot DocTypes are
+available in the Reckon Copilot workspace and administrator sidebar. Candidate
+forms expose administrator-only approve/reject controls, candidate lists can
+run generation, and retired snapshots expose an administrator-only activation
+control. Runtime loading is restricted to the active published snapshot, with
+rollback creating a new published snapshot that preserves history. This
+completes the catalog's privacy-safe continuous-improvement boundary before
+Phase 11; it is controlled prompt improvement, not automatic model training.
 
 The advisor API also has a rolling-deployment compatibility fallback. If an
 older worker raises because it has not loaded `authorize_action`, the endpoint
