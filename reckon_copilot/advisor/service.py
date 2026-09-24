@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from reckon_copilot.advisor.catalog import AdvisorCatalog, default_catalog
 from reckon_copilot.permissions.boundary import (
     CAPABILITY_RUN_ANALYTICS,
     CopilotPermissionBoundary,
@@ -29,6 +30,7 @@ SOURCE_LABELS = {
     "dashboard": "Dashboard layout",
     "workspace": "Workspace layout",
     "permission": "Native permissions",
+    "catalog": "Approved action catalog",
 }
 
 ACTION_LABELS = {
@@ -52,6 +54,7 @@ def get_advice(
     user: str | None = None,
     permission_adapter: PermissionAdapter | None = None,
     metadata: dict[str, Any] | None = None,
+    catalog: AdvisorCatalog | None = None,
 ) -> dict[str, Any]:
     adapter = permission_adapter
     authorized = authorize_context(
@@ -64,8 +67,15 @@ def get_advice(
     page_type = str(authorized.get("page_type") or "Page")
     label = _context_label(authorized)
     family = _page_family(authorized, metadata)
-    questions = _questions(page_type, authorized, metadata, family)
-    actions = _actions(page_type, authorized, adapter, user, metadata, family)
+    catalog = catalog or default_catalog()
+    questions = rank_recommendations(
+        _questions(page_type, authorized, metadata, family)
+        + catalog.questions_for(authorized, metadata)
+    )
+    actions = rank_recommendations(
+        _actions(page_type, authorized, adapter, user, metadata, family)
+        + catalog.actions_for(authorized, metadata)
+    )
     return {
         "ok": True,
         "advisor_version": "v2",

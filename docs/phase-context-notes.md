@@ -105,6 +105,16 @@ the authorized page context changes, and no new write capability is introduced.
 The ranking contract is covered by advisor tests and the UI remains compatible
 with older deployments because it consumes the existing advisor response.
 
+The next catalog slice adds a reusable `AdvisorCatalog` interface with approved
+read-only templates. The default catalog contributes schema-aware Sales Order,
+Sales Invoice, Item and Purchase Order recommendations only when the resolved
+page type, actual DocType and required fields match. Every catalog result keeps
+source reference, catalog version, intent type and read-only execution mode.
+Unsafe write intents, disabled templates, missing fields and unrelated
+DocTypes are rejected before recommendations reach the panel. A future Frappe
+repository can supply administrator-managed templates through this interface
+without changing advisor callers.
+
 ## Phase 9 advisor relevance enhancement
 
 The Agent Advisor was strengthened using Frappe v16's native permission and metadata model. The implementation follows the documented behavior of `frappe.has_permission`, `frappe.get_meta`, permission-aware `frappe.db.get_list` and the document permission hooks described in the Frappe Framework documentation. Structural metadata is read only after route authorization and is reduced to safe signals: required field labels, field count, status/workflow presence, submit capability, report source DocType and compact dashboard/workspace counts. No document values, report rows, chart data or unrestricted workspace content are returned by the advisor.
