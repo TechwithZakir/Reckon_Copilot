@@ -25,7 +25,7 @@ class AdvisorTests(unittest.TestCase):
                 document_permissions={("Sales Order", "SO-0001", "read"): True},
             ),
         )
-        self.assertTrue(any(item["title"] == "What happens next?" for item in result["questions"]))
+        self.assertTrue(any(item["action_type"] == "workflow" for item in result["questions"]))
 
     def test_form_advice_uses_doctype_metadata_and_native_write_permission(self):
         result = get_advice(
@@ -47,7 +47,7 @@ class AdvisorTests(unittest.TestCase):
                 },
             ),
         )
-        self.assertTrue(any(item["title"] == "What is still required?" for item in result["questions"]))
+        self.assertTrue(any(item["category"] == "completion-check" for item in result["questions"]))
         self.assertTrue(any(item.get("action_type") == "update" for item in result["actions"]))
         self.assertTrue(any(item.get("action_type") == "submit" for item in result["actions"]))
         self.assertEqual(result["signals"]["metadata"]["required_fields"], ["Customer", "Transaction Date"])
@@ -64,7 +64,7 @@ class AdvisorTests(unittest.TestCase):
                 document_permissions={("Sales Order", "SO-0001", "read"): True},
             ),
         )
-        self.assertFalse(any(item.get("action_type") for item in result["actions"]))
+        self.assertFalse(any(item.get("action_type") in {"create", "update", "submit", "delete", "approve"} for item in result["actions"]))
 
     def test_advisor_fails_closed_when_action_gate_is_temporarily_unavailable(self):
         original = CopilotPermissionBoundary.authorize_action
@@ -82,7 +82,7 @@ class AdvisorTests(unittest.TestCase):
             )
         finally:
             setattr(CopilotPermissionBoundary, "authorize_action", original)
-        self.assertFalse(any(item.get("action_type") for item in result["actions"]))
+        self.assertFalse(any(item.get("action_type") in {"create", "update", "submit", "delete", "approve"} for item in result["actions"]))
 
     def test_list_advice_explains_status_filter(self):
         result = get_advice(
@@ -91,8 +91,49 @@ class AdvisorTests(unittest.TestCase):
                 doctype_permissions={("Sales Order", "read"): True},
             ),
         )
-        self.assertTrue(any(item["title"] == "Review this status slice" for item in result["questions"]))
+        self.assertTrue(any(item["priority"] == "high" and item["source"] == "filter" for item in result["questions"]))
         self.assertEqual(result["signals"]["filter_count"], 1)
+
+    def test_sales_order_advisor_returns_end_user_helpline_metadata(self):
+        result = get_advice(
+            {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+            user="Administrator",
+            metadata={
+                "field_names": ["customer", "delivery_date", "items", "taxes"],
+                "required_fields": ["Customer", "Transaction Date"],
+                "has_workflow_state": True,
+                "is_submittable": True,
+            },
+            permission_adapter=StaticPermissionAdapter(
+                user="Administrator",
+                roles={"System Manager"},
+                doctype_permissions={("Sales Order", "read"): True},
+                document_permissions={
+                    ("Sales Order", "SO-0001", "read"): True,
+                    ("Sales Order", "SO-0001", "write"): True,
+                    ("Sales Order", "SO-0001", "submit"): True,
+                },
+            ),
+        )
+        self.assertEqual(result["advisor_version"], "v2")
+        self.assertEqual(result["page_family"], "sales")
+        self.assertIn("readiness", result["page_summary"])
+        recommendation = next(item for item in result["questions"] if item["category"] == "sales-readiness")
+        self.assertTrue(recommendation["reason"])
+        self.assertEqual(recommendation["source_label"], "DocType structure")
+        self.assertEqual(recommendation["action_type"], "workflow")
+        self.assertIn(recommendation["priority"], {"high", "normal", "low"})
+
+    def test_report_without_filters_recommends_scope_first(self):
+        result = get_advice(
+            {"page_type": "Report", "report_name": "Sales Person-wise Transaction Summary", "filters": {}},
+            metadata={"ref_doctype": "Sales Order", "report_type": "Script Report"},
+            permission_adapter=StaticPermissionAdapter(reports={"Sales Person-wise Transaction Summary"}),
+        )
+        self.assertEqual(result["page_family"], "sales")
+        scope_question = next(item for item in result["questions"] if item["category"] == "report-scope")
+        self.assertEqual(scope_question["action_type"], "filter")
+        self.assertEqual(scope_question["priority"], "high")
 
     def test_restricted_context_cannot_receive_advice(self):
         with self.assertRaises(PermissionDenied):

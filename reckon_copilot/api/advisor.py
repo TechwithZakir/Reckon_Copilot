@@ -54,6 +54,11 @@ def _safe_page_metadata(context: dict[str, Any], frappe: Any) -> dict[str, Any]:
             metadata.update(
                 {
                     "field_count": len(fields),
+                    "field_names": [
+                        getattr(field, "fieldname", "")
+                        for field in fields
+                        if getattr(field, "fieldname", "")
+                    ][:30],
                     "required_fields": [
                         getattr(field, "label", None) or getattr(field, "fieldname", "")
                         for field in fields
@@ -62,6 +67,9 @@ def _safe_page_metadata(context: dict[str, Any], frappe: Any) -> dict[str, Any]:
                     "has_status": any(getattr(field, "fieldname", "") == "status" for field in fields),
                     "has_workflow_state": any(getattr(field, "fieldname", "") == "workflow_state" for field in fields),
                     "is_submittable": bool(getattr(meta, "is_submittable", False)),
+                    "module": getattr(meta, "module", None),
+                    "title_field": getattr(meta, "title_field", None),
+                    "is_tree": bool(getattr(meta, "is_tree", False)),
                 }
             )
         except Exception:
@@ -71,18 +79,21 @@ def _safe_page_metadata(context: dict[str, Any], frappe: Any) -> dict[str, Any]:
             report = frappe.get_doc("Report", context["report_name"])
             metadata["report_type"] = getattr(report, "report_type", None)
             metadata["ref_doctype"] = getattr(report, "ref_doctype", None)
+            metadata["module"] = getattr(report, "module", None)
         except Exception:
             pass
     elif page_type == "Dashboard" and context.get("dashboard_name"):
         try:
             dashboard = frappe.get_doc("Dashboard", context["dashboard_name"])
             metadata["card_count"] = len(getattr(dashboard, "charts", []) or []) + len(getattr(dashboard, "cards", []) or [])
+            metadata["module"] = getattr(dashboard, "module", None)
         except Exception:
             pass
     elif page_type == "Workspace" and context.get("workspace_name"):
         try:
             workspace = frappe.get_doc("Workspace", context["workspace_name"])
             metadata["link_count"] = len(getattr(workspace, "links", []) or [])
+            metadata["module"] = getattr(workspace, "module", None)
         except Exception:
             pass
     return metadata

@@ -62,6 +62,8 @@ The advisor also fails closed during a rolling deployment if an old worker has n
 
 Relevance and security coverage includes metadata-aware questions, filter-specific questions, permission-filtered action visibility, native document permission enforcement and safe advisor signals. The next action phase must reuse these structured recommendations and perform a second permission check immediately before any approved mutation.
 
+The advisor output is now an end-user helpline contract (`advisor_version: v2`). Every recommendation includes a human-readable reason, priority, source label, semantic action type, execution mode and a full prompt. Domain-aware guidance is selected from the authorized page identity and safe metadata for common Sales, Purchasing, Inventory, Accounts, Projects and People flows. List guidance reacts to active filters and status fields; Form guidance reacts to required fields, workflow/submission state and new-record state; Report, Dashboard and Workspace guidance explains scope, source and next navigation. The panel renders the reason and metadata badges, while quick-question chips send the full prompt behind the short label.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.

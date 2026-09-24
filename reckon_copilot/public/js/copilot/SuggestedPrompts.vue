@@ -1,6 +1,14 @@
 <script setup>
 defineProps({ prompts: { type: Array, default: () => [] } });
 defineEmits(["select"]);
+
+function promptLabel(prompt) {
+  return typeof prompt === "string" ? prompt : prompt?.title || prompt?.prompt || "Question";
+}
+
+function promptValue(prompt) {
+  return typeof prompt === "string" ? prompt : prompt?.prompt || prompt?.title || "";
+}
 </script>
 
 <template>
@@ -12,12 +20,13 @@ defineEmits(["select"]);
     <div class="rc-chip-list">
       <button
         v-for="prompt in prompts"
-        :key="prompt"
+        :key="promptLabel(prompt)"
         class="rc-chip"
         type="button"
-        @click="$emit('select', prompt)"
+        :title="promptValue(prompt)"
+        @click="$emit('select', promptValue(prompt))"
       >
-        {{ prompt }}
+        {{ promptLabel(prompt) }}
       </button>
       <button class="rc-chip rc-chip-more" type="button" aria-label="More quick questions">
         ...

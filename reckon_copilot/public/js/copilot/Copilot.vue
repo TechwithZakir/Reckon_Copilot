@@ -24,6 +24,7 @@ const insightCounts = ref({ critical: 1, warning: 1, info: 1 });
 const notifications = ref([]);
 const advisorQuestions = ref([]);
 const advisorActions = ref([]);
+const advisorSummary = ref("");
 const models = ref([]);
 const selectedModel = ref("");
 const actionPlan = ref(null);
@@ -32,10 +33,19 @@ const actionItems = computed(() => {
   const fromAdvisor = advisorActions.value.filter((item) => item?.title || item?.prompt);
   const fromInsights = insights.value.flatMap((item) => item.suggested_prompts || []);
   const defaults = [
-    { title: "Explain this page", prompt: "Explain this page", category: "help" },
-    { title: "What should I review?", prompt: "What should I review?", category: "analysis" },
+    { title: "Explain this page", prompt: "Explain this page", category: "help", action_type: "help", action_label: "Explain", source_label: "Current page", priority: "normal", reason: "Start with the current page context." },
+    { title: "What should I review?", prompt: "What should I review?", category: "analysis", action_type: "review", action_label: "Review", source_label: "Current page", priority: "normal", reason: "Ask for a focused review of the visible page context." },
   ];
-  const insightItems = fromInsights.map((prompt) => ({ title: prompt, prompt, category: "insight" }));
+  const insightItems = fromInsights.map((prompt) => ({
+    title: prompt,
+    prompt,
+    category: "insight",
+    action_type: "analyze",
+    action_label: "Analyze",
+    source_label: "Current insight",
+    priority: "normal",
+    reason: "This question comes from a current page insight.",
+  }));
   const values = [...fromAdvisor, ...insightItems];
   const seen = new Set();
   return (values.length ? values : defaults)
@@ -48,10 +58,16 @@ const actionItems = computed(() => {
     .slice(0, 5);
 });
 
-const contextualPrompts = computed(() => [...new Set([
-  ...advisorQuestions.value.map((item) => item.title || item.prompt).filter(Boolean),
-  ...prompts.value,
-])].slice(0, 6));
+const contextualPrompts = computed(() => {
+  const items = [...advisorQuestions.value, ...prompts.value];
+  const seen = new Set();
+  return items.filter((item) => {
+    const label = typeof item === "string" ? item : item?.title || item?.prompt;
+    if (!label || seen.has(label)) return false;
+    seen.add(label);
+    return true;
+  }).slice(0, 6);
+});
 
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
@@ -148,6 +164,17 @@ function handleSuggestedAction(item) {
   selectedPrompt.value = item?.prompt || item?.title || "";
 }
 
+function actionMark(item) {
+  if (item?.action_type === "submit") return "!";
+  if (item?.action_type === "navigate") return "→";
+  if (item?.action_type === "filter") return "⌕";
+  return "?";
+}
+
+function priorityLabel(priority) {
+  return priority === "high" ? "High priority" : priority === "low" ? "Low priority" : "Recommended";
+}
+
 async function approveActionPlan() {
   if (!actionPlan.value) return;
   try {
@@ -190,6 +217,7 @@ async function loadInsights() {
     notifications.value = [];
     advisorQuestions.value = [];
     advisorActions.value = [];
+    advisorSummary.value = "";
     insightCounts.value = { critical: 0, warning: props.routeContext?.access_denied ? 1 : 0, info: 0 };
     return;
   }
@@ -204,11 +232,13 @@ async function loadInsights() {
     notifications.value = notificationResult.notifications || [];
     advisorQuestions.value = advice.questions || [];
     advisorActions.value = advice.actions || [];
+    advisorSummary.value = advice.page_summary || "";
   } catch (_error) {
     insights.value = [];
     notifications.value = [];
     advisorQuestions.value = [];
     advisorActions.value = [];
+    advisorSummary.value = "";
     insightCounts.value = { critical: 0, warning: 1, info: 0 };
   }
 }
@@ -416,6 +446,7 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
             <span class="rc-heading-icon" aria-hidden="true">A</span>
             <h3 id="rc-actions-title">Suggested Actions</h3>
           </div>
+          <p v-if="advisorSummary" class="rc-advisor-summary">{{ advisorSummary }}</p>
           <div class="rc-action-list">
             <button
               v-for="item in actionItems"
@@ -425,8 +456,16 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
               :title="item.reason || item.prompt || item.title"
               @click="handleSuggestedAction(item)"
             >
-              <span>?</span>
-              {{ item.title || item.prompt }}
+              <span class="rc-action-mark" aria-hidden="true">{{ actionMark(item) }}</span>
+              <span class="rc-action-content">
+                <strong>{{ item.title || item.prompt }}</strong>
+                <small>{{ item.reason || item.prompt }}</small>
+                <span class="rc-recommendation-meta">
+                  <span class="rc-recommendation-badge" :class="`is-${item.priority || 'normal'}`">{{ priorityLabel(item.priority) }}</span>
+                  <span>{{ item.source_label || "Current page" }}</span>
+                  <span>{{ item.action_label || "Review" }}</span>
+                </span>
+              </span>
             </button>
           </div>
           <button class="rc-link-button rc-more-button" type="button">
