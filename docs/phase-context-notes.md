@@ -34,6 +34,8 @@ The Phase 9 Copilot composer was visually refined with a compact model control, 
 
 The model selector is positioned in the runtime footer beside the LLM provider status, keeping provider choice separate from message composition while preserving server-side validation.
 
+The runtime footer uses a responsive two-row alignment: provider and model controls share the first row, while usage status is padded and aligned beneath them to prevent clipping at narrow panel widths.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.
