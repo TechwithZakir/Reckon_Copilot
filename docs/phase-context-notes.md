@@ -115,6 +115,12 @@ normal user-facing result rather than an error. Tests cover forecast relevance,
 outlier detection, dashboard series, insufficient history, permission
 boundaries, usage logging and the no-write/no-training contract.
 
+The forecasting import also has a rolling-deployment compatibility fallback:
+workers that have loaded the new forecasting API but still have the older
+permission boundary reuse the existing read-only `analytics.run` capability
+until the worker restarts with the Phase 11 boundary. New workers use the
+dedicated `forecasting.run` capability.
+
 ## Phase 9 Suggested Actions Catalog alignment
 
 `Reckon_Copilot_Suggested_Actions_Catalog.md` is now the product reference for

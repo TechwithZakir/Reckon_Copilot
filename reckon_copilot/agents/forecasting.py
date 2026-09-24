@@ -8,12 +8,20 @@ from typing import Any
 
 from reckon_copilot.agents.analytics import AnalyticsDataSource
 from reckon_copilot.analytics.charts import build_chart
-from reckon_copilot.permissions.boundary import (
-    CAPABILITY_RUN_FORECASTING,
-    PermissionAdapter,
-    authorize_context,
-)
+from reckon_copilot.permissions import boundary as permission_boundary
 from reckon_copilot.providers.usage import FrappeUsageLogger, InMemoryUsageLogger, UsageRecord
+
+
+# During a rolling bench deployment the API module can load before the new
+# boundary module is available in every worker. Reuse the existing read-only
+# analytics capability on those older workers instead of raising ImportError.
+CAPABILITY_RUN_FORECASTING = getattr(
+    permission_boundary,
+    "CAPABILITY_RUN_FORECASTING",
+    permission_boundary.CAPABILITY_RUN_ANALYTICS,
+)
+PermissionAdapter = permission_boundary.PermissionAdapter
+authorize_context = permission_boundary.authorize_context
 
 
 class ForecastingError(ValueError):

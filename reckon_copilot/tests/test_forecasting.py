@@ -118,6 +118,14 @@ class ForecastingAgentTests(unittest.TestCase):
                 data_source=InMemoryAnalyticsDataSource(self.rows),
             )
 
+    def test_capability_falls_back_for_older_workers(self):
+        from reckon_copilot.agents import forecasting
+
+        self.assertIn(
+            forecasting.CAPABILITY_RUN_FORECASTING,
+            {"forecasting.run", "analytics.run"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
