@@ -34,7 +34,7 @@ The Phase 9 Copilot composer was visually refined with a compact model control, 
 
 The model selector is positioned in the runtime footer beside the LLM provider status, keeping provider choice separate from message composition while preserving server-side validation.
 
-The runtime footer uses a responsive two-row alignment: provider and model controls share the first row, while usage status is padded and aligned beneath them to prevent clipping at narrow panel widths.
+The runtime footer uses responsive alignment for provider and model controls. Placeholder usage text was removed; actual token estimates remain attached to completed conversation responses.
 
 ## Later planned capabilities: approved actions and import workflows
 

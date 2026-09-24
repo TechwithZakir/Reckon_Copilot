@@ -405,7 +405,6 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
               <option v-for="model in models" :key="model" :value="model">{{ model }}</option>
             </select>
           </label>
-          <span>Usage is shown per response</span>
         </div>
       </div>
     </template>
