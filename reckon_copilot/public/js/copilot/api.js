@@ -109,14 +109,15 @@ export function previewAction(context, action, values = {}) {
   });
 }
 
-export function approvePreview(plan) {
-  return call("reckon_copilot.api.actions.approve_preview", { plan });
+export function approvePreview(plan, context) {
+  return call("reckon_copilot.api.actions.approve_preview", { plan, context });
 }
 
-export function executeAction(plan, approvalToken) {
+export function executeAction(plan, approvalToken, context) {
   return call("reckon_copilot.api.actions.execute_action", {
     plan,
     approval_token: approvalToken,
+    context,
   });
 }
 

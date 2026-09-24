@@ -110,6 +110,7 @@ class ActionExecutorTests(unittest.TestCase):
             user="Administrator",
             site="test.local",
             secret="secret",
+            current_context={"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
             permission_adapter=adapter,
             audit_store=store,
         )
@@ -120,6 +121,7 @@ class ActionExecutorTests(unittest.TestCase):
             user="Administrator",
             site="test.local",
             secret="secret",
+            current_context={"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
             permission_adapter=adapter,
             audit_store=store,
         )
@@ -141,6 +143,7 @@ class ActionExecutorTests(unittest.TestCase):
                 user="Administrator",
                 site="test.local",
                 secret="secret",
+                current_context={"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
                 audit_store=InMemoryAuditStore(),
             )
 
@@ -158,11 +161,31 @@ class ActionExecutorTests(unittest.TestCase):
                 user="Administrator",
                 site="test.local",
                 secret="secret",
+                current_context={"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
                 audit_store=InMemoryAuditStore(),
             )
 
         self.assertEqual(frappe.db.rollback_count, 1)
         self.assertFalse(frappe.document.saved)
+
+    def test_navigation_to_another_document_is_rejected_before_mutation(self):
+        plan, token = _approved_plan()
+        frappe = _FakeFrappe()
+
+        with self.assertRaisesRegex(ActionExecutionError, "Open that DocType and document"):
+            execute_approved_plan(
+                plan,
+                token,
+                frappe_module=frappe,
+                user="Administrator",
+                site="test.local",
+                secret="secret",
+                current_context={"page_type": "Form", "doctype": "Sales Invoice", "document_name": "SI-0001"},
+                audit_store=InMemoryAuditStore(),
+            )
+
+        self.assertFalse(frappe.document.saved)
+        self.assertEqual(frappe.db.rollback_count, 0)
 
     def test_permission_is_rechecked_immediately_before_mutation(self):
         plan, token = _approved_plan()
@@ -181,6 +204,7 @@ class ActionExecutorTests(unittest.TestCase):
                 user="Administrator",
                 site="test.local",
                 secret="secret",
+                current_context={"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
                 permission_adapter=read_only_adapter,
                 audit_store=InMemoryAuditStore(),
             )

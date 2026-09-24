@@ -25,6 +25,32 @@ class ActionPlannerTests(unittest.TestCase):
         self.assertNotIn("token", result["plan"]["values"])
         self.assertEqual(len(result["plan"]["plan_hash"]), 64)
 
+    def test_editable_field_metadata_excludes_protected_fields(self):
+        result = plan_action(
+            {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+            "update",
+            values={"customer": "Crystal Traders"},
+            editable_fields=[
+                {"fieldname": "customer", "label": "Customer", "fieldtype": "Link"},
+                {"fieldname": "modified", "label": "Modified", "fieldtype": "Datetime"},
+                {"fieldname": "internal_note", "label": "Internal note", "fieldtype": "Small Text", "read_only": True},
+            ],
+            user="Administrator",
+            permission_adapter=StaticPermissionAdapter(
+                user="Administrator",
+                roles={"System Manager"},
+                document_permissions={
+                    ("Sales Order", "SO-0001", "read"): True,
+                    ("Sales Order", "SO-0001", "write"): True,
+                },
+            ),
+        )
+
+        self.assertEqual(
+            result["plan"]["editable_fields"],
+            [{"fieldname": "customer", "label": "Customer", "fieldtype": "Link"}],
+        )
+
     def test_high_risk_actions_are_marked(self):
         result = plan_action(
             {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},

@@ -20,6 +20,7 @@ def plan_action(
     action: str,
     *,
     values: dict[str, Any] | None = None,
+    editable_fields: list[dict[str, Any]] | None = None,
     user: str | None = None,
     permission_adapter: PermissionAdapter | None = None,
 ) -> dict[str, Any]:
@@ -45,9 +46,27 @@ def plan_action(
         "high_risk": action_name in HIGH_RISK,
         "execution": "preview_only",
         "user": user,
+        "editable_fields": _safe_editable_fields(editable_fields or []),
     }
     plan["plan_hash"] = stable_hash(canonical_json(plan))
     return {"ok": True, "plan": plan}
+
+
+def _safe_editable_fields(fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    protected = {"name", "owner", "creation", "modified", "modified_by", "docstatus", "parent", "parentfield", "parenttype", "idx"}
+    for item in fields[:40]:
+        if not isinstance(item, dict):
+            continue
+        fieldname = str(item.get("fieldname") or "").strip()
+        if not fieldname or fieldname in protected or item.get("read_only"):
+            continue
+        result.append({
+            "fieldname": fieldname[:80],
+            "label": str(item.get("label") or fieldname).strip()[:120],
+            "fieldtype": str(item.get("fieldtype") or "Data")[:40],
+        })
+    return result
 
 
 def _safe_values(values: dict[str, Any]) -> dict[str, Any]:
