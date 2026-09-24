@@ -171,9 +171,15 @@ def _can_action(context: dict[str, Any], action: str, adapter: PermissionAdapter
     if adapter is None:
         return False
     try:
-        CopilotPermissionBoundary(adapter).authorize_action(context, action, user=user)
+        boundary = CopilotPermissionBoundary(adapter)
+        authorize_action = getattr(boundary, "authorize_action", None)
+        if not callable(authorize_action):
+            # A rolling deploy can briefly leave an old worker loaded. Fail
+            # closed to read-only advice until that worker is restarted.
+            return False
+        authorize_action(context, action, user=user)
         return True
-    except (PermissionDenied, KeyError, TypeError, ValueError):
+    except (PermissionDenied, AttributeError, KeyError, TypeError, ValueError):
         return False
 
 

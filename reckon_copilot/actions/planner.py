@@ -7,6 +7,7 @@ from reckon_copilot.knowledge.models import stable_hash
 from reckon_copilot.permissions.boundary import (
     CopilotPermissionBoundary,
     FrappePermissionAdapter,
+    PermissionDenied,
     PermissionAdapter,
 )
 
@@ -25,11 +26,11 @@ def plan_action(
     action_name = str(action or "").strip().lower()
     if action_name not in ACTION_TYPES:
         raise ValueError("Unsupported Copilot action")
-    authorized = CopilotPermissionBoundary(permission_adapter or FrappePermissionAdapter()).authorize_action(
-        context,
-        action_name,
-        user=user,
-    ).context
+    boundary = CopilotPermissionBoundary(permission_adapter or FrappePermissionAdapter())
+    authorize_action = getattr(boundary, "authorize_action", None)
+    if not callable(authorize_action):
+        raise PermissionDenied("Copilot action permissions are updating; please retry shortly")
+    authorized = authorize_action(context, action_name, user=user).context
     target = {
         "doctype": authorized.get("doctype"),
         "document_name": authorized.get("document_name"),

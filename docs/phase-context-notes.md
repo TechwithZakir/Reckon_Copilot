@@ -58,6 +58,8 @@ Questions and actions are now page-specific and structured with stable ids, prom
 
 The shared `CopilotPermissionBoundary.authorize_action` now checks native DocType/document permissions for create, update, delete, submit and approve previews. This prevents a read-only user from receiving a misleading write preview and gives the future executor one reusable permission gate. The planner and advisor both use this boundary; they do not call Frappe permissions ad hoc.
 
+The advisor also fails closed during a rolling deployment if an old worker has not loaded `authorize_action` yet: it suppresses write previews and continues with read-only advice instead of raising a server error. Workers should still be restarted after deployment so all processes load the same boundary implementation.
+
 Relevance and security coverage includes metadata-aware questions, filter-specific questions, permission-filtered action visibility, native document permission enforcement and safe advisor signals. The next action phase must reuse these structured recommendations and perform a second permission check immediately before any approved mutation.
 
 ## Later planned capabilities: approved actions and import workflows

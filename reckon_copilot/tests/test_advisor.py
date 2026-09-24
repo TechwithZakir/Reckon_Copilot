@@ -1,5 +1,6 @@
 import unittest
 
+from reckon_copilot.permissions.boundary import CopilotPermissionBoundary
 from reckon_copilot.advisor.service import get_advice
 from reckon_copilot.permissions.boundary import PermissionDenied, StaticPermissionAdapter
 
@@ -63,6 +64,24 @@ class AdvisorTests(unittest.TestCase):
                 document_permissions={("Sales Order", "SO-0001", "read"): True},
             ),
         )
+        self.assertFalse(any(item.get("action_type") for item in result["actions"]))
+
+    def test_advisor_fails_closed_when_action_gate_is_temporarily_unavailable(self):
+        original = CopilotPermissionBoundary.authorize_action
+        try:
+            delattr(CopilotPermissionBoundary, "authorize_action")
+            result = get_advice(
+                {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+                user="Administrator",
+                permission_adapter=StaticPermissionAdapter(
+                    user="Administrator",
+                    roles={"System Manager"},
+                    doctype_permissions={("Sales Order", "read"): True},
+                    document_permissions={("Sales Order", "SO-0001", "read"): True},
+                ),
+            )
+        finally:
+            setattr(CopilotPermissionBoundary, "authorize_action", original)
         self.assertFalse(any(item.get("action_type") for item in result["actions"]))
 
     def test_list_advice_explains_status_filter(self):
