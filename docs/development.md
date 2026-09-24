@@ -158,6 +158,12 @@ as high-risk operations and verify that each still requires the same explicit
 approval plus final execution click. Do not use production records until backup,
 rollback and audit review procedures are approved.
 
+For create or update suggestions with no explicit field values, verify that the
+panel explains what information is needed and does not show an approval button.
+The user must provide the exact values before Copilot can prepare an executable
+plan. Submit and approve suggestions do not need field values, but still require
+approval followed by the final execution click.
+
 ## Suggested Actions Catalog Verification
 
 The catalog is complete before Phase 11 and remains read-only. Run the advisor

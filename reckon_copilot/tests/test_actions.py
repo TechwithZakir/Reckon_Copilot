@@ -21,9 +21,27 @@ class ActionPlannerTests(unittest.TestCase):
             ),
         )
         self.assertTrue(result["plan"]["requires_confirmation"])
+        self.assertFalse(result["plan"]["needs_input"])
         self.assertEqual(result["plan"]["execution"], "preview_only")
         self.assertNotIn("token", result["plan"]["values"])
         self.assertEqual(len(result["plan"]["plan_hash"]), 64)
+
+    def test_empty_update_preview_requires_explicit_values(self):
+        result = plan_action(
+            {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+            "update",
+            user="Administrator",
+            permission_adapter=StaticPermissionAdapter(
+                user="Administrator",
+                roles={"System Manager"},
+                document_permissions={
+                    ("Sales Order", "SO-0001", "read"): True,
+                    ("Sales Order", "SO-0001", "write"): True,
+                },
+            ),
+        )
+
+        self.assertTrue(result["plan"]["needs_input"])
 
     def test_high_risk_actions_are_marked(self):
         result = plan_action(

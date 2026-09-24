@@ -43,6 +43,7 @@ def plan_action(
         "values": safe_values,
         "requires_confirmation": True,
         "high_risk": action_name in HIGH_RISK,
+        "needs_input": action_name in {"create", "update"} and not safe_values,
         "execution": "preview_only",
         "user": user,
     }

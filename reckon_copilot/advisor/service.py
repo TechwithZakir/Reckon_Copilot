@@ -374,7 +374,7 @@ def _actions(
                 f"Complete this {label} draft",
                 f"Identify missing information before saving this {label}.",
                 "draft-completion",
-                "This is a new form and the user has native create permission; approval is still required before any future insert.",
+                "This is a new form with native create permission. Copilot needs explicit field values and approval before any insert.",
                 "permission", priority="high" if metadata.get("required_fields") else "normal",
                 action_type="create", requires_confirmation=True,
             )])
@@ -400,7 +400,7 @@ def _actions(
                 "Preview allowed edits",
                 f"{date_hint}prepare a preview of permitted updates to this {label}; do not apply them.",
                 "write-preview",
-                "Native write permission is available for this record, but execution remains disabled until explicit approval and audit are implemented.",
+                "Native write permission is available. Explicit field values, approval and a final execution click are required before any change.",
                 "permission", action_type="update", requires_confirmation=True,
             ))
         if metadata.get("is_submittable") and _can_action(context, "submit", permission_adapter, user):
@@ -408,7 +408,7 @@ def _actions(
                 "Preview submission checks",
                 f"{date_hint}prepare a preview of the checks required before submitting this {label}.",
                 "submission-preview",
-                "This DocType is submittable and native submit permission is available; execution remains disabled.",
+                "This DocType is submittable and native submit permission is available; approval and a final execution click are required.",
                 "permission", priority="high", action_type="submit", requires_confirmation=True,
             ))
         return rank_recommendations(result)

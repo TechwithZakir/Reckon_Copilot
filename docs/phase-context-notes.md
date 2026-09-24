@@ -137,7 +137,9 @@ transaction on mutation failure. Approval now rechecks the exact target before
 issuing a token, and preview/approval failures return panel-safe messages rather
 than Frappe error modals. No action is triggered by an ordinary question, and
 no action runs automatically from catalog refresh, feedback learning or the
-read-only Phase 11 agents.
+read-only Phase 11 agents. Create and update previews without explicit field
+values stop at a clear next step and cannot be approved; submit and approve
+previews remain the simple no-value approval path.
 
 ## Phase 9 Suggested Actions Catalog alignment
 
