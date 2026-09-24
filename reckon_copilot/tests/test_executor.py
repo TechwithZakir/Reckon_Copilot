@@ -10,7 +10,7 @@ from reckon_copilot.actions.executor import (
     execute_approved_plan,
 )
 from reckon_copilot.actions.planner import plan_action
-from reckon_copilot.permissions.boundary import StaticPermissionAdapter
+from reckon_copilot.permissions.boundary import PermissionDenied, StaticPermissionAdapter
 
 
 class _FakeDB:
@@ -162,6 +162,29 @@ class ActionExecutorTests(unittest.TestCase):
             )
 
         self.assertEqual(frappe.db.rollback_count, 1)
+        self.assertFalse(frappe.document.saved)
+
+    def test_permission_is_rechecked_immediately_before_mutation(self):
+        plan, token = _approved_plan()
+        frappe = _FakeFrappe()
+        read_only_adapter = StaticPermissionAdapter(
+            user="Administrator",
+            roles={"System Manager"},
+            document_permissions={("Sales Order", "SO-0001", "read"): True},
+        )
+
+        with self.assertRaises(PermissionDenied):
+            execute_approved_plan(
+                plan,
+                token,
+                frappe_module=frappe,
+                user="Administrator",
+                site="test.local",
+                secret="secret",
+                permission_adapter=read_only_adapter,
+                audit_store=InMemoryAuditStore(),
+            )
+
         self.assertFalse(frappe.document.saved)
 
 

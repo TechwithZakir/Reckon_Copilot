@@ -18,7 +18,7 @@ const emit = defineEmits(["close", "approve", "execute"]);
         <span v-if="plan.target?.document_name">/{{ plan.target.document_name }}</span>
       </p>
       <p v-if="plan.error" class="rc-action-risk" role="alert">{{ plan.error }}</p>
-      <p v-else-if="approved" class="rc-action-approved" role="status">Approval recorded. Confirm execution to apply this action.</p>
+      <p v-else-if="approved" class="rc-action-approved" role="status">Approval recorded. Select Execute only when you are ready to apply this action.</p>
       <p v-if="plan.high_risk" class="rc-action-risk" role="alert">High-risk operation. Review carefully before approval.</p>
       <dl class="rc-action-details">
         <dt>Execution</dt><dd>{{ plan.execution }}</dd>

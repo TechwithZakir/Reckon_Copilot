@@ -227,7 +227,13 @@ async function approveActionPlan() {
     const result = await approvePreview(actionPlan.value);
     if (result?.approval_token) {
       actionApprovalToken.value = result.approval_token;
-      actionPlan.value = { ...actionPlan.value, approval_status: "approved" };
+      actionPlan.value = {
+        ...actionPlan.value,
+        approval_status: "approved",
+        execution: result.execution || "ready_to_execute",
+      };
+    } else if (result?.message) {
+      actionPlan.value = { ...actionPlan.value, error: result.message };
     }
   } catch (error) {
     actionPlan.value = { error: error.message || "Approval could not be recorded." };

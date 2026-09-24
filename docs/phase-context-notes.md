@@ -121,6 +121,24 @@ permission boundary reuse the existing read-only `analytics.run` capability
 until the worker restarts with the Phase 11 boundary. New workers use the
 dedicated `forecasting.run` capability.
 
+## Phase 12 controlled write actions
+
+Phase 12 has started with the controlled action path for create, update, delete,
+submit and approve operations. The path is separate from normal Copilot,
+Analytics and Forecasting requests. A Form action must first pass the native
+permission boundary, produce a deterministic plan hash and show a preview. A
+second explicit approval issues a short-lived user/site/plan-scoped token; a
+final execution click is still required before mutation.
+
+The executor revalidates native permissions immediately before the write,
+rejects protected or unknown fields, records a `Copilot Action Audit` record,
+prevents duplicate execution of a completed plan and rolls back the current
+transaction on mutation failure. Approval now rechecks the exact target before
+issuing a token, and preview/approval failures return panel-safe messages rather
+than Frappe error modals. No action is triggered by an ordinary question, and
+no action runs automatically from catalog refresh, feedback learning or the
+read-only Phase 11 agents.
+
 ## Phase 9 Suggested Actions Catalog alignment
 
 `Reckon_Copilot_Suggested_Actions_Catalog.md` is now the product reference for

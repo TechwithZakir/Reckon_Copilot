@@ -138,6 +138,26 @@ no action preview is opened, and no model-training or prompt-learning record is
 created. Do not test against production records until a staging backup and
 rollback procedure are available.
 
+## Phase 12 Verification
+
+Phase 12 is the approval-gated write path. On staging, open an existing Form
+as a System Manager and select a write-preview suggestion. Confirm that the
+panel shows the target DocType, record, action, risk and plan hash. Confirm that
+closing the dialog or cancelling does not change the record.
+
+Approve the plan and verify that the UI changes to `ready_to_execute`; approval
+alone must not mutate data. Select `Execute approved action` only after checking
+the preview, then confirm the expected native Frappe result and a completed
+`Copilot Action Audit` record. Repeat the same execution request and confirm it
+returns an idempotent result without applying the change twice.
+
+Test an unauthorized user, a changed plan, an expired token, an unknown field,
+and a protected field. Each must remain inside the Copilot panel with a useful
+message and must not show a Frappe server-error modal. Test submit/delete/approve
+as high-risk operations and verify that each still requires the same explicit
+approval plus final execution click. Do not use production records until backup,
+rollback and audit review procedures are approved.
+
 ## Suggested Actions Catalog Verification
 
 The catalog is complete before Phase 11 and remains read-only. Run the advisor
