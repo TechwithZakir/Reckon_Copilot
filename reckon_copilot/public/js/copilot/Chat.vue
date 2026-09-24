@@ -314,9 +314,6 @@ onBeforeUnmount(() => {
       </article>
     </div>
     <div class="rc-composer-box">
-      <select v-if="models.length > 1" class="rc-model-select" :value="selectedModel" aria-label="Select LLM model" @change="emit('update:selectedModel', $event.target.value)">
-        <option v-for="model in models" :key="model" :value="model">{{ model }}</option>
-      </select>
       <button class="rc-attach-button" type="button" disabled aria-label="Attach context" title="Context is attached automatically">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m21.4 11.6-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5" />

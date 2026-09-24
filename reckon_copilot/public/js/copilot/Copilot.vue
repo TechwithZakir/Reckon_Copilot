@@ -399,6 +399,12 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
         <Chat :initial-prompt="selectedPrompt" :route-context="routeContext" :models="models" :selected-model="selectedModel" @update:selected-model="selectedModel = $event" />
         <div class="rc-runtime">
           <span><i aria-hidden="true"></i>Using LLM provider</span>
+          <label v-if="models.length > 1" class="rc-runtime-model">
+            <span class="sr-only">Select LLM model</span>
+            <select :value="selectedModel" aria-label="Select LLM model" @change="selectedModel = $event.target.value">
+              <option v-for="model in models" :key="model" :value="model">{{ model }}</option>
+            </select>
+          </label>
           <span>Usage is shown per response</span>
         </div>
       </div>
