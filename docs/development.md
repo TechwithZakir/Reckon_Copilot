@@ -109,6 +109,35 @@ If migration reports a missing `copilot_action_audit` module, confirm the app
 contains both `copilot_action_audit.py` and `__init__.py` beside the DocType
 JSON, then restart the bench processes before retrying migration.
 
+## Phase 11 Verification
+
+Phase 11 adds a separate read-only Forecasting Agent. Run the complete checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+.\.venv\Scripts\python.exe -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+On a staging Frappe bench, migrate and open a permitted List with at least
+three dated numeric observations. In the Copilot conversation select `Forecast`
+and ask for the outlook. Confirm that the response shows a readable narrative,
+forecast periods, a compact chart and `Forecasting Agent` metadata. Select
+`Anomalies` and ask for unusual values; confirm that outliers show their period,
+observed value, expected value and priority. Open a permitted Dashboard with a
+visible time-series chart and confirm that its compact chart snapshot can be
+forecast without exposing raw dashboard rows.
+
+Verify that a page with fewer than three usable time points returns a helpful
+"at least 3 are needed" message, not a server error. Repeat as a restricted
+user and confirm the result remains inside the Copilot panel. Inspect the usage
+log for capability `forecasting.run`. The result must remain deterministic and
+read-only: no ERP record is created, changed, submitted, approved or deleted,
+no action preview is opened, and no model-training or prompt-learning record is
+created. Do not test against production records until a staging backup and
+rollback procedure are available.
+
 ## Suggested Actions Catalog Verification
 
 The catalog is complete before Phase 11 and remains read-only. Run the advisor

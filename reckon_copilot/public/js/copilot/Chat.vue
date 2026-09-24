@@ -1,9 +1,9 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
-import { askCopilotStream, runAnalytics } from "./api";
+import { askCopilotStream, runAnalytics, runForecasting } from "./api";
 import { formatAnswer } from "./answer_format.mjs";
-import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse } from "./chat_logic.mjs";
+import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse, normalizeForecastingResponse } from "./chat_logic.mjs";
 
 const props = defineProps({
   initialPrompt: { type: String, default: "" },
@@ -32,6 +32,13 @@ const analyticsStages = [
   "Running bounded analysis",
   "Preparing results",
 ];
+const forecastingStages = [
+  "Reading page context",
+  "Checking permissions",
+  "Selecting permitted time series",
+  "Calculating bounded result",
+  "Preparing readable results",
+];
 
 watch(() => props.initialPrompt, (value) => {
   draft.value = value;
@@ -48,9 +55,12 @@ async function send() {
   draft.value = "";
   isSending.value = true;
   try {
+    const isForecasting = ["forecasting", "anomalies"].includes(props.agentMode);
     const response = props.agentMode === "analytics"
       ? await runAnalytics(question, props.routeContext)
-      : await askCopilotStream({
+      : isForecasting
+        ? await runForecasting(question, props.routeContext, props.agentMode)
+        : await askCopilotStream({
         requestId,
         question,
         context: props.routeContext,
@@ -60,8 +70,10 @@ async function send() {
     if (!assistantMessage.streamDone) {
       const normalized = props.agentMode === "analytics"
         ? normalizeAnalyticsResponse(response)
-        : normalizeAskResponse(response);
-      finishProgress(assistantMessage, normalized, { reveal: props.agentMode !== "analytics" });
+        : isForecasting
+          ? normalizeForecastingResponse(response)
+          : normalizeAskResponse(response);
+      finishProgress(assistantMessage, normalized, { reveal: !["analytics", "forecasting", "anomalies"].includes(props.agentMode) });
     }
   } catch (error) {
     finishProgress(
@@ -80,6 +92,7 @@ async function send() {
 
 function createProgressMessage() {
   const analytics = props.agentMode === "analytics";
+  const forecasting = ["forecasting", "anomalies"].includes(props.agentMode);
   return {
     role: "assistant",
     tone: "normal",
@@ -87,14 +100,14 @@ function createProgressMessage() {
     progress: {
       active: true,
       stageIndex: 0,
-      stages: analytics ? analyticsStages : progressStages,
+      stages: analytics ? analyticsStages : forecasting ? forecastingStages : progressStages,
       startedAt: Date.now(),
       elapsed: "0s",
       percent: 8,
     },
     meta: {
-      provider: analytics ? "Analytics Agent" : "LLM provider",
-      stream: !analytics,
+      provider: analytics ? "Analytics Agent" : forecasting ? "Forecasting Agent" : "LLM provider",
+      stream: !analytics && !forecasting,
     },
     streamDone: false,
   };
@@ -160,6 +173,7 @@ function finishProgress(message, normalized, options = {}) {
   message.answer = answer;
   message.answerReady = !options.reveal;
   message.analytics = normalized.meta?.analytics || null;
+  message.forecasting = normalized.meta?.forecasting || null;
   message.meta = {
     ...(normalized.meta || {}),
     stream: Boolean(message.meta?.stream),
@@ -272,6 +286,22 @@ onBeforeUnmount(() => {
         >
           Analytics
         </button>
+        <button
+          type="button"
+          :class="{ 'is-active': agentMode === 'forecasting' }"
+          :aria-pressed="agentMode === 'forecasting'"
+          @click="emit('update:agentMode', 'forecasting')"
+        >
+          Forecast
+        </button>
+        <button
+          type="button"
+          :class="{ 'is-active': agentMode === 'anomalies' }"
+          :aria-pressed="agentMode === 'anomalies'"
+          @click="emit('update:agentMode', 'anomalies')"
+        >
+          Anomalies
+        </button>
       </div>
       <button
         v-if="isSending"
@@ -349,6 +379,33 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <small class="rc-analytics-source">Read-only analysis · {{ message.analytics.tool_label }}</small>
+        </div>
+        <div v-if="message.forecasting" class="rc-analytics-result rc-forecasting-result">
+          <div v-if="message.forecasting.metrics?.length" class="rc-analytics-metrics">
+            <span v-for="metric in message.forecasting.metrics" :key="`${metric.label}-${metric.value}`">
+              <small>{{ metric.label }}</small>
+              <strong>{{ metric.value }}</strong>
+            </span>
+          </div>
+          <table v-if="message.forecasting.table?.rows?.length" class="rc-analytics-table">
+            <thead>
+              <tr>
+                <th v-for="column in message.forecasting.table.columns" :key="column.key">{{ column.label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, rowIndex) in message.forecasting.table.rows" :key="rowIndex">
+                <td v-for="column in message.forecasting.table.columns" :key="column.key">{{ row[column.key] }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="message.forecasting.anomalies?.length" class="rc-forecasting-anomalies">
+            <strong>Observations to review</strong>
+            <p v-for="item in message.forecasting.anomalies" :key="`${item.period}-${item.value}`">
+              {{ item.period }}: {{ item.value }} vs expected {{ item.expected }} ({{ item.severity }} priority)
+            </p>
+          </div>
+          <small class="rc-analytics-source">Read-only deterministic result · {{ message.forecasting.tool_label }}</small>
         </div>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
           <div class="rc-progress-line">

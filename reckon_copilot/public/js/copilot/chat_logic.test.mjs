@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse } from "./chat_logic.mjs";
+import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse, normalizeForecastingResponse } from "./chat_logic.mjs";
 
 test("normal ask response becomes assistant message", () => {
   const message = normalizeAskResponse({
@@ -44,4 +44,21 @@ test("analytics response keeps structured table and chart data", () => {
   assert.equal(message.meta.provider, "Analytics Agent");
   assert.equal(message.meta.analytics.chart.type, "bar");
   assert.equal(message.meta.analytics.table.rows[0].group, "Crystal Traders");
+});
+
+test("forecasting response keeps compact forecast and safety metadata", () => {
+  const message = normalizeForecastingResponse({
+    ok: true,
+    agent: "forecasting",
+    narrative: "The outlook is expected to increase.",
+    intent: "forecast",
+    safety: { read_only: true, writes: false, model_training: false },
+    forecast: { values: [120, 140] },
+    anomalies: [],
+  });
+
+  assert.equal(message.text, "The outlook is expected to increase.");
+  assert.equal(message.meta.provider, "Forecasting Agent");
+  assert.deepEqual(message.meta.forecasting.forecast.values, [120, 140]);
+  assert.equal(message.meta.forecasting.safety.writes, false);
 });

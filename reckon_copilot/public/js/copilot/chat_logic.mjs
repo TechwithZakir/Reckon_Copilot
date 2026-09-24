@@ -75,6 +75,43 @@ export function normalizeAnalyticsResponse(response) {
   };
 }
 
+export function normalizeForecastingResponse(response) {
+  if (!response) {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: "The Forecasting Agent did not return a result. Please try again.",
+    };
+  }
+  if (response.access_denied) {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: response.message || "The Forecasting Agent cannot access this page with your current permissions.",
+    };
+  }
+  if (!response.ok) {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: response.message || "The Forecasting Agent could not complete for this page.",
+    };
+  }
+  const isAnomaly = response.intent === "anomaly";
+  return {
+    role: "assistant",
+    tone: "normal",
+    text: response.narrative || (isAnomaly ? "No anomaly result was found." : "No forecast result was found."),
+    meta: {
+      source: response.source || "Current page",
+      provider: "Forecasting Agent",
+      model: "deterministic",
+      intent: response.intent,
+      forecasting: response,
+    },
+  };
+}
+
 export function canAsk(question, context) {
   return Boolean(String(question || "").trim() && context && !context.access_denied);
 }

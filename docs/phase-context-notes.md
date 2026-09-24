@@ -92,6 +92,29 @@ keeps provider briefings usable for non-technical users. Controlled writes,
 invoice/document import and large-file migration remain later phases because
 they require separate approval, dependency and rollback boundaries.
 
+## Phase 11 read-only forecasting and anomaly agent
+
+Phase 11 has started with a separate deterministic Forecasting Agent. It is
+available through `reckon_copilot.api.forecasting.run` and the `Forecast` and
+`Anomalies` modes in the Copilot conversation. The service authorizes the
+canonical context with the dedicated read-only `forecasting.run` capability
+before reading any rows or dashboard chart series.
+
+The agent uses bounded, explainable calculations only: a linear trend for a
+short forecast horizon and a recent-history deviation check for anomalies. It
+supports permitted List/Form data through the existing ORM data source and
+compact Dashboard chart snapshots. It returns a plain-language narrative,
+small metrics/table/chart payloads and compact anomaly observations. It does
+not call an LLM, write ERPNext records, create action plans or train/update a
+model. The response explicitly reports `read_only`, `writes: false` and
+`model_training: false` safeguards.
+
+The Phase 11 UI shows the agent's bounded progress stages and renders forecast
+values and anomaly observations as readable results. Insufficient history is a
+normal user-facing result rather than an error. Tests cover forecast relevance,
+outlier detection, dashboard series, insufficient history, permission
+boundaries, usage logging and the no-write/no-training contract.
+
 ## Phase 9 Suggested Actions Catalog alignment
 
 `Reckon_Copilot_Suggested_Actions_Catalog.md` is now the product reference for

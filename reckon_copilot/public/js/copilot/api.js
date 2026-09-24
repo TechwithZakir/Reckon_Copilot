@@ -97,6 +97,10 @@ export function runAnalytics(question, context) {
   return call("reckon_copilot.api.analytics.run", { question, context });
 }
 
+export function runForecasting(question, context, mode = "forecast") {
+  return call("reckon_copilot.api.forecasting.run", { question, context, mode });
+}
+
 export function previewAction(context, action, values = {}) {
   return call("reckon_copilot.api.actions.preview_action", {
     context,
