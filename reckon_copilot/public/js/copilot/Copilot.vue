@@ -28,12 +28,24 @@ const models = ref([]);
 const selectedModel = ref("");
 const actionPlan = ref(null);
 
-const actionPrompts = computed(() => {
-  const fromAdvisor = advisorActions.value.map((item) => item.title || item.prompt).filter(Boolean);
+const actionItems = computed(() => {
+  const fromAdvisor = advisorActions.value.filter((item) => item?.title || item?.prompt);
   const fromInsights = insights.value.flatMap((item) => item.suggested_prompts || []);
-  const defaults = ["Explain this page", "What should I review?", "Which filters may help?"];
-  const values = [...new Set([...fromAdvisor, ...fromInsights])];
-  return (values.length ? values : defaults).slice(0, 4);
+  const defaults = [
+    { title: "Explain this page", prompt: "Explain this page", category: "help" },
+    { title: "What should I review?", prompt: "What should I review?", category: "analysis" },
+  ];
+  const insightItems = fromInsights.map((prompt) => ({ title: prompt, prompt, category: "insight" }));
+  const values = [...fromAdvisor, ...insightItems];
+  const seen = new Set();
+  return (values.length ? values : defaults)
+    .filter((item) => {
+      const key = item.title || item.prompt;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
 });
 
 const contextualPrompts = computed(() => [...new Set([
@@ -50,7 +62,7 @@ const summaryText = computed(() => {
   if (props.routeContext?.access_denied) {
     return `I can see this is a ${type.toLowerCase()} page, but your current permissions do not allow Copilot to read its context.`;
   }
-  return `I am ready to help with this ${type.toLowerCase()} context. Phase 2 uses sanitized route context only.`;
+  return `I am ready to help with this ${type.toLowerCase()} using permission-scoped page signals and relevant suggestions.`;
 });
 
 const contextFingerprint = computed(() => props.routeContext?.fingerprint || "");
@@ -126,6 +138,14 @@ async function requestActionPreview(action) {
   } catch (error) {
     actionPlan.value = { error: error.message || "Action preview is unavailable." };
   }
+}
+
+function handleSuggestedAction(item) {
+  if (item?.action_type && item.requires_confirmation) {
+    requestActionPreview(item.action_type);
+    return;
+  }
+  selectedPrompt.value = item?.prompt || item?.title || "";
 }
 
 async function approveActionPlan() {
@@ -398,22 +418,15 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
           </div>
           <div class="rc-action-list">
             <button
-              v-for="prompt in actionPrompts"
-              :key="prompt"
+              v-for="item in actionItems"
+              :key="item.id || item.title || item.prompt"
               class="rc-action"
               type="button"
-              @click="selectedPrompt = prompt"
+              :title="item.reason || item.prompt || item.title"
+              @click="handleSuggestedAction(item)"
             >
               <span>?</span>
-              {{ prompt }}
-            </button>
-            <button v-if="routeContext?.page_type === 'Form'" class="rc-action" type="button" @click="requestActionPreview('update')">
-              <span>?</span>
-              Preview an update
-            </button>
-            <button v-if="routeContext?.page_type === 'Form'" class="rc-action" type="button" @click="requestActionPreview('submit')">
-              <span>!</span>
-              Preview submission
+              {{ item.title || item.prompt }}
             </button>
           </div>
           <button class="rc-link-button rc-more-button" type="button">

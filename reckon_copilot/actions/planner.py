@@ -5,9 +5,9 @@ from typing import Any
 from reckon_copilot.context.builders import canonical_json
 from reckon_copilot.knowledge.models import stable_hash
 from reckon_copilot.permissions.boundary import (
-    CAPABILITY_WRITE_ACTION,
+    CopilotPermissionBoundary,
+    FrappePermissionAdapter,
     PermissionAdapter,
-    authorize_context,
 )
 
 ACTION_TYPES = {"create", "update", "delete", "submit", "approve"}
@@ -25,11 +25,10 @@ def plan_action(
     action_name = str(action or "").strip().lower()
     if action_name not in ACTION_TYPES:
         raise ValueError("Unsupported Copilot action")
-    authorized = authorize_context(
+    authorized = CopilotPermissionBoundary(permission_adapter or FrappePermissionAdapter()).authorize_action(
         context,
-        capability=CAPABILITY_WRITE_ACTION,
+        action_name,
         user=user,
-        adapter=permission_adapter,
     ).context
     target = {
         "doctype": authorized.get("doctype"),

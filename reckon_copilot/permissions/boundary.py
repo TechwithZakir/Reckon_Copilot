@@ -321,6 +321,60 @@ class CopilotPermissionBoundary:
             decision=AccessDecision(True, "allowed", fields),
         )
 
+    def authorize_action(
+        self,
+        context: dict[str, Any],
+        action: str,
+        user: str | None = None,
+    ) -> AuthorizedContext:
+        """Authorize a proposed DocType action through native permission checks.
+
+        This is deliberately separate from context authorization: reading a form
+        does not imply that Copilot may suggest or prepare a write operation.
+        The eventual executor must call this same boundary immediately before
+        mutating ERPNext data.
+        """
+        action_name = str(action or "").strip().lower()
+        if action_name not in {"create", "update", "delete", "submit", "approve"}:
+            raise PermissionDenied("Unsupported Copilot action")
+
+        authorized = self.authorize(
+            context,
+            capability=CAPABILITY_WRITE_ACTION,
+            user=user,
+        )
+        user = user or self.adapter.session_user()
+        doctype = _required(authorized.context, "doctype")
+        document_name = authorized.context.get("document_name")
+
+        if action_name == "create":
+            # Create previews are only valid for an unsaved form. This avoids
+            # turning a crafted existing-record request into an insert plan.
+            allowed = (
+                not document_name or _is_new_document_name(document_name)
+            ) and self.adapter.has_doctype_permission(doctype, "create", user)
+        elif not document_name or _is_new_document_name(document_name):
+            allowed = False
+        else:
+            permission_type = {
+                "update": "write",
+                "delete": "delete",
+                # Frappe has no generic "approve" ptype. A submit-level
+                # permission is the minimum native gate before workflow checks.
+                "submit": "submit",
+                "approve": "submit",
+            }[action_name]
+            allowed = self.adapter.has_document_permission(
+                doctype,
+                str(document_name),
+                permission_type,
+                user,
+            )
+
+        if not allowed:
+            raise PermissionDenied(f"No permission to {action_name} requested document")
+        return authorized
+
     def _assert_capability(self, capability: str, user: str) -> None:
         if capability == CAPABILITY_WRITE_ACTION:
             roles = self.adapter.user_roles(user)

@@ -50,6 +50,16 @@ Phase 9 is complete. It delivers the contextual Agent Advisor, server-validated 
 
 The next phase should implement the controlled executor only after those safeguards are designed and tested.
 
+## Phase 9 advisor relevance enhancement
+
+The Agent Advisor was strengthened using Frappe v16's native permission and metadata model. The implementation follows the documented behavior of `frappe.has_permission`, `frappe.get_meta`, permission-aware `frappe.db.get_list` and the document permission hooks described in the Frappe Framework documentation. Structural metadata is read only after route authorization and is reduced to safe signals: required field labels, field count, status/workflow presence, submit capability, report source DocType and compact dashboard/workspace counts. No document values, report rows, chart data or unrestricted workspace content are returned by the advisor.
+
+Questions and actions are now page-specific and structured with stable ids, prompts, category, priority, source and a user-facing reason. List pages react to filter presence and status-like filters; Forms react to required fields, new-record state, workflow/submission metadata and native write/submit permissions; Reports react to active filters and source DocType; Dashboards and Workspaces react to compact structural counts. Form preview actions are generated from the advisor response instead of hardcoded page-type buttons.
+
+The shared `CopilotPermissionBoundary.authorize_action` now checks native DocType/document permissions for create, update, delete, submit and approve previews. This prevents a read-only user from receiving a misleading write preview and gives the future executor one reusable permission gate. The planner and advisor both use this boundary; they do not call Frappe permissions ad hoc.
+
+Relevance and security coverage includes metadata-aware questions, filter-specific questions, permission-filtered action visibility, native document permission enforcement and safe advisor signals. The next action phase must reuse these structured recommendations and perform a second permission check immediately before any approved mutation.
+
 ## Later planned capabilities: approved actions and import workflows
 
 Future action phases will support permission-bound actionable prompts for creating, updating, deleting, submitting and approving DocType records. Every mutating operation must produce a compact preview of the intended changes, identify the target DocType and records, validate the user's capability through the shared permission boundary, and require explicit user approval immediately before execution. Delete, submit and approve operations require an additional high-risk confirmation and must be fully audited.

@@ -14,7 +14,10 @@ class ActionPlannerTests(unittest.TestCase):
             permission_adapter=StaticPermissionAdapter(
                 user="Administrator",
                 roles={"System Manager"},
-                document_permissions={("Sales Order", "SO-0001", "read"): True},
+                document_permissions={
+                    ("Sales Order", "SO-0001", "read"): True,
+                    ("Sales Order", "SO-0001", "write"): True,
+                },
             ),
         )
         self.assertTrue(result["plan"]["requires_confirmation"])
@@ -30,7 +33,10 @@ class ActionPlannerTests(unittest.TestCase):
             permission_adapter=StaticPermissionAdapter(
                 user="Administrator",
                 roles={"System Manager"},
-                document_permissions={("Sales Order", "SO-0001", "read"): True},
+                document_permissions={
+                    ("Sales Order", "SO-0001", "read"): True,
+                    ("Sales Order", "SO-0001", "submit"): True,
+                },
             ),
         )
         self.assertTrue(result["plan"]["high_risk"])
@@ -41,6 +47,33 @@ class ActionPlannerTests(unittest.TestCase):
                 {"page_type": "List", "doctype": "Sales Order"},
                 "delete",
                 permission_adapter=StaticPermissionAdapter(doctype_permissions={("Sales Order", "read"): True}),
+            )
+
+    def test_write_action_requires_native_document_permission(self):
+        with self.assertRaises(PermissionDenied):
+            plan_action(
+                {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+                "update",
+                user="Administrator",
+                permission_adapter=StaticPermissionAdapter(
+                    user="Administrator",
+                    roles={"System Manager"},
+                    document_permissions={("Sales Order", "SO-0001", "read"): True},
+                ),
+            )
+
+    def test_create_action_cannot_target_existing_document(self):
+        with self.assertRaises(PermissionDenied):
+            plan_action(
+                {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+                "create",
+                user="Administrator",
+                permission_adapter=StaticPermissionAdapter(
+                    user="Administrator",
+                    roles={"System Manager"},
+                    doctype_permissions={("Sales Order", "create"): True},
+                    document_permissions={("Sales Order", "SO-0001", "read"): True},
+                ),
             )
 
 
