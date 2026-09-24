@@ -1,0 +1,30 @@
+{
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2026-09-24 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["plan_hash", "action", "target_doctype", "target_name", "user", "site", "status", "plan_payload", "result_name", "error"],
+  "fields": [
+    {"fieldname": "plan_hash", "fieldtype": "Data", "label": "Plan Hash", "unique": 1},
+    {"fieldname": "action", "fieldtype": "Data", "label": "Action"},
+    {"fieldname": "target_doctype", "fieldtype": "Data", "label": "Target DocType"},
+    {"fieldname": "target_name", "fieldtype": "Data", "label": "Target Name"},
+    {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User"},
+    {"fieldname": "site", "fieldtype": "Data", "label": "Site"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "started\ncompleted\nfailed"},
+    {"fieldname": "plan_payload", "fieldtype": "Long Text", "label": "Plan Payload"},
+    {"fieldname": "result_name", "fieldtype": "Data", "label": "Result Name"},
+    {"fieldname": "error", "fieldtype": "Small Text", "label": "Error"}
+  ],
+  "links": [],
+  "modified": "2026-09-24 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Reckon Copilot",
+  "name": "Copilot Action Audit",
+  "owner": "Administrator",
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1}],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}

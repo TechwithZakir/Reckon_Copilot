@@ -1,6 +1,9 @@
 <script setup>
-defineProps({ plan: { type: Object, default: null } });
-const emit = defineEmits(["close", "approve"]);
+defineProps({
+  plan: { type: Object, default: null },
+  approved: { type: Boolean, default: false },
+});
+const emit = defineEmits(["close", "approve", "execute"]);
 </script>
 
 <template>
@@ -14,6 +17,8 @@ const emit = defineEmits(["close", "approve"]);
         {{ plan.action }} {{ plan.target?.doctype || "record" }}
         <span v-if="plan.target?.document_name">/{{ plan.target.document_name }}</span>
       </p>
+      <p v-if="plan.error" class="rc-action-risk" role="alert">{{ plan.error }}</p>
+      <p v-else-if="approved" class="rc-action-approved" role="status">Approval recorded. Confirm execution to apply this action.</p>
       <p v-if="plan.high_risk" class="rc-action-risk" role="alert">High-risk operation. Review carefully before approval.</p>
       <dl class="rc-action-details">
         <dt>Execution</dt><dd>{{ plan.execution }}</dd>
@@ -22,7 +27,8 @@ const emit = defineEmits(["close", "approve"]);
       </dl>
       <div class="rc-action-dialog-actions">
         <button class="rc-secondary-button" type="button" @click="emit('close')">Cancel</button>
-        <button class="rc-primary-button" type="button" @click="emit('approve')">Approve preview</button>
+        <button v-if="!plan.error && !approved" class="rc-primary-button" type="button" @click="emit('approve')">Approve action</button>
+        <button v-else-if="!plan.error" class="rc-primary-button" type="button" @click="emit('execute')">Execute approved action</button>
       </div>
     </div>
   </div>

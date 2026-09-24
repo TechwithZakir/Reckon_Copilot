@@ -50,6 +50,23 @@ Phase 9 is complete. It delivers the contextual Agent Advisor, server-validated 
 
 The next phase should implement the controlled executor only after those safeguards are designed and tested.
 
+## Phase 10 controlled executor starting point
+
+Phase 10 now has the first controlled execution slice. A plan can be
+executed only when its deterministic hash still matches, its short-lived HMAC
+approval token matches the current user and site, and the native Frappe action
+permission boundary authorizes the same target immediately before mutation.
+Create and update values are checked against DocType metadata and protected
+system fields are rejected. Failed mutations attempt a database rollback,
+repeated completed requests return an idempotent result, and every execution
+attempt is recorded in `Copilot Action Audit`.
+
+The Copilot dialog separates `Approve action` from `Execute approved action`.
+The current executor intentionally does not infer field changes from natural
+language and does not execute imports or migrations. Those workflows require
+their own dry-run plans, row-level validation, dependency handling and
+approval scopes before they can be enabled.
+
 ## Phase 9 Suggested Actions Catalog alignment
 
 `Reckon_Copilot_Suggested_Actions_Catalog.md` is now the product reference for

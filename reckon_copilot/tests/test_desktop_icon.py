@@ -44,6 +44,7 @@ class DesktopIconTests(unittest.TestCase):
             "Copilot Knowledge Vector Index",
             "Copilot Provider",
             "Copilot Usage Log",
+            "Copilot Action Audit",
             "Copilot User Preference",
         }
 

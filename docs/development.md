@@ -81,3 +81,22 @@ node scripts/validate_vue.mjs
 ```
 
 Manual verification on a Frappe bench should confirm Redis-backed cache access works, cache misses do not break normal requests when Redis is unavailable, and repeated equivalent RAG retrievals reuse cached evidence only within the same permission scope.
+
+## Phase 10 Verification
+
+Run the standard checks plus executor coverage:
+
+```powershell
+python -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+python -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+On a Frappe bench, migrate before testing the new `Copilot Action Audit`
+DocType. Verify a Form recommendation requires separate approval and
+execution clicks, a changed plan is rejected, native permission is checked
+again at execution time, failed writes show a panel-safe message, repeated
+requests are idempotent, and the audit record is visible under the Reckon
+Copilot workspace. Do not test against production records until a staging
+backup and rollback procedure are available.

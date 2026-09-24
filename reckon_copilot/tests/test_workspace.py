@@ -26,6 +26,7 @@ class WorkspaceTests(unittest.TestCase):
             "Copilot User Preference",
             "Copilot Provider",
             "Copilot Usage Log",
+            "Copilot Action Audit",
         }
 
         self.assertTrue(expected.issubset(links))

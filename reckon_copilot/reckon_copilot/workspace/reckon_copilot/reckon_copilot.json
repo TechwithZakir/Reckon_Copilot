@@ -100,6 +100,16 @@
       "link_type": "DocType",
       "onboard": 0,
       "type": "Link"
+    },
+    {
+      "description": "Review approved action execution attempts.",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Copilot Action Audit",
+      "link_to": "Copilot Action Audit",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
     }
   ],
   "modified": "2026-09-21 00:00:00.000000",
@@ -178,6 +188,15 @@
       "format": "{}",
       "label": "Usage Logs",
       "link_to": "Copilot Usage Log",
+      "stats_filter": "[]",
+      "type": "DocType"
+    },
+    {
+      "color": "Gray",
+      "doc_view": "List",
+      "format": "{}",
+      "label": "Action Audits",
+      "link_to": "Copilot Action Audit",
       "stats_filter": "[]",
       "type": "DocType"
     },

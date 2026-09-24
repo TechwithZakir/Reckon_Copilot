@@ -96,6 +96,13 @@ export function approvePreview(plan) {
   return call("reckon_copilot.api.actions.approve_preview", { plan });
 }
 
+export function executeAction(plan, approvalToken) {
+  return call("reckon_copilot.api.actions.execute_action", {
+    plan,
+    approval_token: approvalToken,
+  });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }

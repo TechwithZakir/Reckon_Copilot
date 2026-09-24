@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { approvePreview, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, savePreferences } from "./api";
+import { approvePreview, executeAction, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ActionApproval from "./ActionApproval.vue";
 import ContextHeader from "./ContextHeader.vue";
@@ -28,6 +28,7 @@ const advisorSummary = ref("");
 const models = ref([]);
 const selectedModel = ref("");
 const actionPlan = ref(null);
+const actionApprovalToken = ref("");
 const showAllActions = ref(false);
 const showAllQuestions = ref(false);
 const ACTION_PREVIEW_LIMIT = 5;
@@ -167,7 +168,10 @@ async function requestActionPreview(action) {
   if (props.routeContext?.page_type !== "Form") return;
   try {
     const result = await previewAction(props.routeContext, action);
-    if (result?.plan) actionPlan.value = result.plan;
+    if (result?.plan) {
+      actionApprovalToken.value = "";
+      actionPlan.value = result.plan;
+    }
   } catch (error) {
     actionPlan.value = { error: error.message || "Action preview is unavailable." };
   }
@@ -203,9 +207,25 @@ function toggleQuestions() {
 async function approveActionPlan() {
   if (!actionPlan.value) return;
   try {
-    await approvePreview(actionPlan.value);
-  } finally {
+    const result = await approvePreview(actionPlan.value);
+    if (result?.approval_token) {
+      actionApprovalToken.value = result.approval_token;
+      actionPlan.value = { ...actionPlan.value, approval_status: "approved" };
+    }
+  } catch (error) {
+    actionPlan.value = { error: error.message || "Approval could not be recorded." };
+  }
+}
+
+async function executeApprovedAction() {
+  if (!actionPlan.value || !actionApprovalToken.value) return;
+  try {
+    const result = await executeAction(actionPlan.value, actionApprovalToken.value);
+    if (!result?.ok) throw new Error(result?.message || "Action could not be completed.");
     actionPlan.value = null;
+    actionApprovalToken.value = "";
+  } catch (error) {
+    actionPlan.value = { ...actionPlan.value, error: error.message || "Action could not be completed." };
   }
 }
 
@@ -529,10 +549,12 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
         </div>
       </div>
       <ActionApproval
-        v-if="actionPlan && !actionPlan.error"
+        v-if="actionPlan"
         :plan="actionPlan"
+        :approved="Boolean(actionApprovalToken)"
         @close="actionPlan = null"
         @approve="approveActionPlan"
+        @execute="executeApprovedAction"
       />
     </template>
   </aside>

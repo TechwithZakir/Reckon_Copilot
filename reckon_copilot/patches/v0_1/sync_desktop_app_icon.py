@@ -103,6 +103,7 @@ def _sidebar_items():
         ("Settings", "DocType", "", "settings", 0, "Section Break"),
         ("Copilot Provider", "DocType", "Copilot Provider", "", 1, "Link"),
         ("Copilot Usage Log", "DocType", "Copilot Usage Log", "", 1, "Link"),
+        ("Copilot Action Audit", "DocType", "Copilot Action Audit", "", 1, "Link"),
         ("Copilot User Preference", "DocType", "Copilot User Preference", "", 1, "Link"),
     ]
     return [
