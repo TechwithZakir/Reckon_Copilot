@@ -54,6 +54,30 @@ test("module workspace route is not promoted to list by list-like dom", () => {
   assert.equal(getPageType(route), "Workspace");
 });
 
+test("private workspace route uses the workspace slug", () => {
+  setDeskPath("/desk/private/reckon-copilot");
+
+  const route = getCanonicalRoute(["Workspace", "Private"]);
+
+  assert.deepEqual(route, ["Workspace", "Reckon Copilot"]);
+  assert.equal(getPageType(route), "Workspace");
+});
+
+test("workspace dom wins over a stale list global", () => {
+  setDeskPath("/desk/selling");
+  global.document.querySelector = (selector) =>
+    selector.startsWith(".workspace") ? {} : null;
+  global.window.cur_list = {
+    doctype: "Selling",
+    view_name: "List",
+  };
+
+  const route = getCanonicalRoute(["List", "Selling", "List"]);
+
+  assert.deepEqual(route, ["Workspace", "Selling"]);
+  assert.equal(getPageType(route), "Workspace");
+});
+
 test("one-part doctype route falls back to visible title before cur_list is ready", () => {
   setDeskPath("/desk/customer-group");
   global.document.selectors.set(".page-title .title-text", textNode("Customer Group"));

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from reckon_copilot.context.builders import (
     build_context,
+    canonicalize_workspace_routes,
     fingerprint_context,
     promote_workspace_slug_to_doctype,
 )
@@ -34,6 +36,32 @@ def _canonicalize_with_frappe(context: dict[str, Any]) -> dict[str, Any]:
     def workspace_exists(name: str) -> bool:
         return bool(frappe.db.exists("Workspace", name))
 
+    def resolve_workspace(name: str) -> str | None:
+        candidate = str(name or "").strip()
+        if not candidate:
+            return None
+
+        exact = frappe.db.exists("Workspace", candidate)
+        if exact:
+            return str(exact if isinstance(exact, str) else candidate)
+
+        # Private workspace URLs use a slug while the record keeps its title.
+        # Compare normalized names without exposing workspace contents.
+        wanted = _workspace_slug(candidate)
+        try:
+            records = frappe.get_all(
+                "Workspace",
+                fields=["name"],
+                limit_page_length=0,
+            )
+        except Exception:
+            return None
+        for record in records or []:
+            record_name = str(record.get("name") or "")
+            if record_name and _workspace_slug(record_name) == wanted:
+                return record_name
+        return None
+
     def doctype_exists(name: str) -> bool:
         return bool(frappe.db.exists("DocType", name))
 
@@ -43,12 +71,21 @@ def _canonicalize_with_frappe(context: dict[str, Any]) -> dict[str, Any]:
         except Exception:
             return False
 
-    return promote_workspace_slug_to_doctype(
+    canonical = canonicalize_workspace_routes(
         context,
+        resolve_workspace=resolve_workspace,
+        doctype_exists=doctype_exists,
+    )
+    return promote_workspace_slug_to_doctype(
+        canonical,
         workspace_exists=workspace_exists,
         doctype_exists=doctype_exists,
         is_tree_doctype=is_tree_doctype,
     )
+
+
+def _workspace_slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
 
 
 @_whitelist(allow_guest=False)

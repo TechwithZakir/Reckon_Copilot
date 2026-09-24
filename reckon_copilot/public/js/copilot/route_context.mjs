@@ -57,12 +57,24 @@ function looksLikeDeskListPage(slug) {
   return Boolean(title && slugify(title) === slug);
 }
 
+function looksLikeWorkspacePage() {
+  return Boolean(
+    document.querySelector(
+      ".workspace, .codex-editor, .widget-group, .workspace-sidebar, .dashboard-container, .number-card"
+    )
+  );
+}
+
 export function getCanonicalRoute(rawRoute = getRoute()) {
   const deskParts = getDeskParts();
   const slug = deskParts[0] || "";
 
   if (deskParts.length === 0) {
     return ["Homepage", "Home"];
+  }
+
+  if (deskParts[0] === "private") {
+    return ["Workspace", titleCaseSlug(deskParts[1] || rawRoute.at(-1) || "Private")];
   }
 
   if (slug === "dashboard-view") {
@@ -82,6 +94,12 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
       window.cur_frm.doctype,
       window.cur_frm.doc?.name || rawRoute[2] || rawRoute[1] || deskParts[1],
     ].filter(Boolean);
+  }
+
+  // A module workspace can expose list-like DOM nodes while its page is
+  // loading. Prefer the workspace route before consulting stale list globals.
+  if (deskParts.length === 1 && looksLikeWorkspacePage()) {
+    return ["Workspace", titleCaseSlug(slug)];
   }
 
   if (window.cur_list?.doctype && slugify(window.cur_list.doctype) === slug) {

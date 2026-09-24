@@ -225,6 +225,61 @@ def promote_workspace_slug_to_doctype(
     return promoted
 
 
+def canonicalize_workspace_routes(
+    context: dict[str, Any],
+    resolve_workspace,
+    doctype_exists,
+) -> dict[str, Any]:
+    """Resolve Desk workspace slugs before a context reaches permissions.
+
+    Frappe module routes and private workspace routes can arrive with a
+    client-side hint such as ``List / Selling`` or ``Workspace / Private``.
+    Those labels are route hints, not authoritative DocType or Workspace
+    names. Resolve the route against Frappe records and keep real DocType
+    routes unchanged when a name exists in both namespaces.
+    """
+    page_type = context.get("page_type")
+    candidates: list[str] = []
+
+    if page_type == "List":
+        doctype = context.get("doctype")
+        if doctype and not doctype_exists(str(doctype)):
+            candidates.append(str(doctype))
+    elif page_type == "Workspace":
+        workspace_name = context.get("workspace_name")
+        if workspace_name:
+            candidates.append(str(workspace_name))
+
+        route = context.get("route")
+        if isinstance(route, list):
+            candidates.extend(str(value) for value in route[1:] if value)
+
+    seen: set[str] = set()
+    resolved_name = None
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        resolved_name = resolve_workspace(candidate)
+        if resolved_name:
+            break
+
+    if not resolved_name:
+        return context
+
+    canonical = dict(context)
+    canonical["page_type"] = "Workspace"
+    canonical["workspace_name"] = str(resolved_name)
+    canonical.pop("doctype", None)
+    canonical.pop("view", None)
+    canonical["permission"] = {
+        **dict(canonical.get("permission") or {}),
+        "canonicalized_from": "desk_workspace_route",
+        "route_hint": candidates[0] if candidates else None,
+    }
+    return canonical
+
+
 def build_context(route: Any = None, filters: Any = None, page_type: Any = None) -> dict[str, Any]:
     normalized = normalize_context_input(route=route, filters=filters, page_type=page_type)
     route_type = normalized.page_type or route_type_for(normalized.route)

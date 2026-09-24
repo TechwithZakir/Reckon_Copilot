@@ -297,3 +297,18 @@ internal permission labels remain outside the user-facing prompt.
 The Desk adapter uses `frappe.get_route()` as its route hint, but the server
 continues to canonicalize and authorize the resulting context before advisor,
 insight, knowledge or provider use.
+
+## Workspace route canonicalization
+
+Module workspace URLs such as `/desk/selling`, `/desk/stock` and
+`/desk/subcontracting` must be represented as `Workspace` context. They are
+not DocTypes, even when Desk exposes list-like markup while the workspace is
+loading. Private URLs such as `/desk/private/reckon-copilot` are resolved from
+their slug to the stored Workspace name before permission checks.
+
+The client prefers workspace DOM signals and private route slugs, while the
+server resolves the final name against Frappe Workspace records. A real
+DocType route remains a `List` route when that DocType exists, including tree
+DocTypes such as Customer Group and Item Group. This prevents false `DocType
+... not found` errors and keeps invalid or restricted contexts inside the
+Copilot permission boundary.

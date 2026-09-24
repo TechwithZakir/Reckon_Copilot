@@ -4,6 +4,7 @@ import unittest
 
 from reckon_copilot.context.builders import (
     build_context,
+    canonicalize_workspace_routes,
     fingerprint_context,
     humanize_slug,
     normalize_context_input,
@@ -115,6 +116,32 @@ class ContextNormalizationTests(unittest.TestCase):
 
         self.assertEqual(promoted["page_type"], "Workspace")
         self.assertEqual(promoted["workspace_name"], "Projects")
+
+    def test_list_workspace_slug_is_canonicalized_before_permission_checks(self):
+        context = build_context(route=["List", "Selling", "List"], page_type="List")
+
+        canonical = canonicalize_workspace_routes(
+            context,
+            resolve_workspace=lambda name: "Selling" if name == "Selling" else None,
+            doctype_exists=lambda name: False,
+        )
+
+        self.assertEqual(canonical["page_type"], "Workspace")
+        self.assertEqual(canonical["workspace_name"], "Selling")
+        self.assertNotIn("doctype", canonical)
+
+    def test_private_workspace_slug_uses_route_tail(self):
+        context = build_context(route=["Workspace", "Private"], page_type="Workspace")
+        context["route"] = ["private", "reckon-copilot"]
+
+        canonical = canonicalize_workspace_routes(
+            context,
+            resolve_workspace=lambda name: "Reckon Copilot" if name == "reckon-copilot" else None,
+            doctype_exists=lambda name: False,
+        )
+
+        self.assertEqual(canonical["page_type"], "Workspace")
+        self.assertEqual(canonical["workspace_name"], "Reckon Copilot")
 
     def test_item_group_workspace_slug_promotes_to_tree_doctype(self):
         context = build_context(route=["Workspace", "Item Group"])
