@@ -346,6 +346,12 @@
   font-weight: 800;
 }
 
+.rc-attach-button svg,
+.rc-send-button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .rc-alert-action {
   align-self: center;
   color: #2374e8;

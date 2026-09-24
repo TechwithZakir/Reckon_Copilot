@@ -379,7 +379,7 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
         <Chat :initial-prompt="selectedPrompt" :route-context="routeContext" />
         <div class="rc-runtime">
           <span><i aria-hidden="true"></i>Using LLM provider</span>
-          <span>Tokens: 248</span>
+          <span>Usage is shown per response</span>
         </div>
       </div>
     </template>

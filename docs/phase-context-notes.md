@@ -24,6 +24,8 @@ The next planned phase should extend notifications into persistence, user dismis
 
 The Copilot panel now keeps urgent findings in Alerts and shows only supporting information findings under Key Insights, avoiding duplicate warnings. Suggested Actions are derived from returned insight prompts with concise fallbacks. Conversation responses explicitly show when no answer was found, and completed streamed requests display a 100% Completed progress state.
 
+The composer UI now uses icon controls, functional Enter/Shift+Enter behavior, response-level token estimates and a non-placeholder runtime label. Model selection remains server-controlled until a multi-model provider contract is added.
+
 ## Important product direction
 
 Do not rely on browser-only heuristics for serious DocType, module, report, dashboard or record recognition.

@@ -139,6 +139,7 @@ function finishProgress(message, normalized, options = {}) {
   message.meta = {
     ...(normalized.meta || {}),
     stream: true,
+    tokens: message.meta?.tokens || estimateTokens(message.text || responseText),
   };
   message.progress = {
     ...(message.progress || {}),
@@ -152,7 +153,12 @@ function finishProgress(message, normalized, options = {}) {
     typeAnswer(message, responseText);
   } else {
     message.text = responseText;
+    message.meta.tokens = estimateTokens(message.text);
   }
+}
+
+function estimateTokens(text) {
+  return Math.max(1, Math.ceil(String(text || "").length / 4));
 }
 
 function typeAnswer(message, text) {
@@ -251,6 +257,7 @@ onBeforeUnmount(() => {
           <span v-if="message.meta.cacheHit">cached</span>
           <span v-if="message.meta.model">Model: {{ message.meta.model }}</span>
           <span v-if="message.meta.stream">Realtime stream</span>
+          <span v-if="message.meta.tokens">Tokens: {{ message.meta.tokens }}</span>
         </small>
         <div v-if="message.meta?.evidence?.length" class="rc-evidence-list" aria-label="Evidence">
           <span
@@ -279,7 +286,11 @@ onBeforeUnmount(() => {
       </article>
     </div>
     <div class="rc-composer-box">
-      <button class="rc-attach-button" type="button" disabled aria-label="Attach context">+</button>
+      <button class="rc-attach-button" type="button" disabled aria-label="Attach context" title="Context is attached automatically">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m21.4 11.6-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5" />
+        </svg>
+      </button>
       <textarea
         v-model="draft"
         rows="2"
@@ -294,11 +305,14 @@ onBeforeUnmount(() => {
         aria-label="Send message"
         @click="send"
       >
-        &gt;
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m5 12 14-7-4 14-3-6-7-1Z" />
+          <path d="m12 13 7-8" />
+        </svg>
       </button>
     </div>
     <div class="rc-composer-help">
-      <span>Shift + Enter for new line</span>
+      <span>Enter to send · Shift + Enter for new line</span>
       <span>/ to see prompts</span>
     </div>
   </section>
