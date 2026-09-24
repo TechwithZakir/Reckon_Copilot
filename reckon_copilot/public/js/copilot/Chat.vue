@@ -134,6 +134,7 @@ function applyStreamEvent(message, event) {
 }
 
 function finishProgress(message, normalized, options = {}) {
+  const responseText = normalized.text || "No answer was found for this page context.";
   message.tone = normalized.tone || "normal";
   message.meta = {
     ...(normalized.meta || {}),
@@ -146,10 +147,11 @@ function finishProgress(message, normalized, options = {}) {
     elapsed: message.progress?.elapsed || "0s",
     percent: 100,
   };
+  message.progress.label = "Completed";
   if (options.reveal) {
-    typeAnswer(message, normalized.text || "");
+    typeAnswer(message, responseText);
   } else {
-    message.text = normalized.text || message.text || "";
+    message.text = responseText;
   }
 }
 
@@ -219,7 +221,7 @@ onBeforeUnmount(() => {
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
           <div class="rc-progress-line">
             <span class="rc-progress-spinner" aria-hidden="true"></span>
-            <strong>{{ message.progress.stages[message.progress.stageIndex] }}</strong>
+            <strong>{{ message.progress.active ? message.progress.stages[message.progress.stageIndex] : message.progress.label }}</strong>
             <em>{{ message.progress.elapsed }}</em>
           </div>
           <div

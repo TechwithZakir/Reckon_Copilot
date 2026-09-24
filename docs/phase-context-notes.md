@@ -20,6 +20,10 @@ Phase 8 foundation is implemented as proactive, permission-bound notifications a
 
 The next planned phase should extend notifications into persistence, user dismissal state and optional scheduled/server-pushed alert jobs after the latest Phase 8 commit is pushed, deployed, migrated if needed, cache-cleared and manually verified on the target bench.
 
+## UI refinement after Phase 8
+
+The Copilot panel now keeps urgent findings in Alerts and shows only supporting information findings under Key Insights, avoiding duplicate warnings. Suggested Actions are derived from returned insight prompts with concise fallbacks. Conversation responses explicitly show when no answer was found, and completed streamed requests display a 100% Completed progress state.
+
 ## Important product direction
 
 Do not rely on browser-only heuristics for serious DocType, module, report, dashboard or record recognition.

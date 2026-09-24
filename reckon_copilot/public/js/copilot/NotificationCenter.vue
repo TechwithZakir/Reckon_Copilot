@@ -33,6 +33,10 @@ function insightClass(severity) {
 function insightMark(severity) {
   return severity === "critical" ? "!" : severity === "warning" ? "+" : "i";
 }
+
+function isSupportingInsight(insight) {
+  return insight?.severity === "info";
+}
 </script>
 
 <template>
@@ -79,7 +83,7 @@ function insightMark(severity) {
         <span class="rc-insight-arrow" aria-hidden="true">&gt;</span>
       </div>
       <button
-        v-for="insight in insights.length ? insights : fallbackInsights"
+        v-for="insight in (insights.filter(isSupportingInsight).length ? insights.filter(isSupportingInsight) : fallbackInsights.filter(isSupportingInsight))"
         :key="insight.finding_id || insight.title"
         class="rc-insight-card"
         :class="insightClass(insight.severity)"

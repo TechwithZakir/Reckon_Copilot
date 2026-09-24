@@ -22,6 +22,12 @@ const insights = ref([]);
 const insightCounts = ref({ critical: 1, warning: 1, info: 1 });
 const notifications = ref([]);
 
+const actionPrompts = computed(() => {
+  const fromInsights = insights.value.flatMap((item) => item.suggested_prompts || []);
+  const defaults = ["Explain this page", "What should I review?", "Which filters may help?"];
+  return [...new Set([...fromInsights, ...defaults])].slice(0, 4);
+});
+
 const panelLabel = computed(() =>
   state.value.isMinimized ? "Expand Reckon Copilot" : "Minimize Reckon Copilot",
 );
@@ -350,21 +356,15 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
             <h3 id="rc-actions-title">Suggested Actions</h3>
           </div>
           <div class="rc-action-list">
-            <button class="rc-action" type="button" @click="selectedPrompt = 'What should I review?'">
+            <button
+              v-for="prompt in actionPrompts"
+              :key="prompt"
+              class="rc-action"
+              type="button"
+              @click="selectedPrompt = prompt"
+            >
               <span>?</span>
-              What should I review?
-            </button>
-            <button class="rc-action" type="button" @click="selectedPrompt = 'Show related records'">
-              <span>?</span>
-              Show related records
-            </button>
-            <button class="rc-action" type="button" @click="selectedPrompt = 'Explain this page'">
-              <span>?</span>
-              Explain this page
-            </button>
-            <button class="rc-action" type="button" @click="selectedPrompt = 'Create a reminder'">
-              <span>?</span>
-              Create a reminder
+              {{ prompt }}
             </button>
           </div>
           <button class="rc-link-button rc-more-button" type="button">
