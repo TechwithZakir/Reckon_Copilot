@@ -174,9 +174,14 @@ export function askCopilot(question, context, evidence = [], selectedModel = "")
 
 export function askCopilotStream({ requestId, question, context, evidence = [], selectedModel = "", onEvent }) {
   const realtime = window.frappe?.realtime;
-  const canStream = realtime && typeof realtime.on === "function" && typeof realtime.off === "function";
+  const socketUnavailable = realtime?.socket && realtime.socket.connected === false;
+  const canStream =
+    realtime &&
+    typeof realtime.on === "function" &&
+    typeof realtime.off === "function" &&
+    !socketUnavailable;
   if (!canStream) {
-    return askCopilot(question, context, evidence);
+    return askCopilot(question, context, evidence, selectedModel);
   }
 
   const eventName = "reckon_copilot_stream";
@@ -202,7 +207,7 @@ export function askCopilotStream({ requestId, question, context, evidence = [], 
           percent: 65,
           provider: "LLM provider",
         });
-        return askCopilot(question, context, evidence);
+        return askCopilot(question, context, evidence, selectedModel);
       }
       throw error;
     })

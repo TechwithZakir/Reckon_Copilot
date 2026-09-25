@@ -115,3 +115,16 @@ rerun the local suite before retrying.
 Release is ready only when migrations, assets, health, permissions, agent
 responses, write confirmations, audit logs and rollback rehearsal all pass for
 both Administrator and restricted-user paths.
+
+## 9. Staging smoke-test record
+
+On 2026-09-25, the authenticated Administrator smoke test covered the
+Homepage, Sales Order List, Sales Order Form, Analytics, Forecast, Anomalies,
+contextual suggestions, submit preview and update preview. Forecast and
+Anomalies returned readable deterministic results with completed progress
+stages. Submit and update previews were canceled; no ERP record was changed.
+
+The staging browser still reported Frappe Socket.IO `Unauthorized` connection
+errors. Copilot requests completed through the normal API fallback, but the
+bench/socket authentication and worker configuration must be corrected before
+claiming realtime streaming readiness in production.

@@ -578,6 +578,11 @@ matrix with Administrator and restricted users, review audit and usage logs,
 and complete business-user acceptance for the supported contexts. Production
 release should follow only after those checks and a backup/rollback rehearsal.
 
+The first authenticated Administrator staging smoke test is recorded in
+`docs/release-readiness.md`. The application flows passed, while Frappe
+Socket.IO reported `Unauthorized`; realtime infrastructure remains a release
+blocker even though Copilot safely falls back to the normal request path.
+
 Future work is optional and should be opened as a new phase only when a
 business requirement is agreed, such as persistent alert dismissal, OCR or
 large-file migration. None is required to finish the current planned scope.
