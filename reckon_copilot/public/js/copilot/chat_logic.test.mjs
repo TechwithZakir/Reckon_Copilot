@@ -62,3 +62,14 @@ test("forecasting response keeps compact forecast and safety metadata", () => {
   assert.deepEqual(message.meta.forecasting.forecast.values, [120, 140]);
   assert.equal(message.meta.forecasting.safety.writes, false);
 });
+
+test("forecasting response stays readable for incomplete provider results", () => {
+  assert.equal(
+    normalizeForecastingResponse({ ok: true, intent: "forecast", narrative: "" }).text,
+    "No forecast result was found."
+  );
+  assert.equal(
+    normalizeForecastingResponse("unexpected provider payload").text,
+    "The Forecasting Agent returned an unreadable result. Please try again."
+  );
+});

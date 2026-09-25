@@ -567,7 +567,7 @@ onBeforeUnmount(() => {
             </section>
           </div>
         </template>
-        <p v-else>{{ message.text }}</p>
+        <p v-else>{{ message.text || "No response was returned. Please try again." }}</p>
         <div v-if="message.analytics" class="rc-analytics-result">
           <div v-if="message.analytics.metrics?.length" class="rc-analytics-metrics">
             <span v-for="metric in message.analytics.metrics" :key="`${metric.label}-${metric.value}`">
@@ -778,7 +778,7 @@ onBeforeUnmount(() => {
           </ol>
         </div>
         <small v-if="message.meta">
-          {{ message.meta.intent || message.meta.source || message.meta.provider || "copilot" }}
+          {{ message.meta.provider || message.meta.source || message.meta.intent || "copilot" }}
           <span v-if="message.meta.cacheHit">cached</span>
           <span v-if="message.meta.model">Model: {{ message.meta.model }}</span>
           <span v-if="message.meta.stream">Realtime stream</span>

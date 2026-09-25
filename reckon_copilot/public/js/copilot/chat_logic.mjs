@@ -83,6 +83,13 @@ export function normalizeForecastingResponse(response) {
       text: "The Forecasting Agent did not return a result. Please try again.",
     };
   }
+  if (typeof response !== "object") {
+    return {
+      role: "assistant",
+      tone: "warning",
+      text: "The Forecasting Agent returned an unreadable result. Please try again.",
+    };
+  }
   if (response.access_denied) {
     return {
       role: "assistant",
