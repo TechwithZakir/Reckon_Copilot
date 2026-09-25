@@ -1446,6 +1446,17 @@
   color: #183b66;
 }
 
+.rc-import-excerpt {
+  max-height: 92px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #d5e5f8;
+  border-radius: 6px;
+  background: #fff;
+  color: #31577f;
+  white-space: pre-wrap;
+}
+
 .rc-import-suggestion {
   color: #315f9a;
   font-weight: 700;

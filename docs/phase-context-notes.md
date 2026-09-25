@@ -497,5 +497,23 @@ and record the failure in the audit record.
 
 The UI must show separate `Approve import` and `Execute approved import`
 controls. Approval alone never writes data. Every import plan remains bounded
-to 100 rows, does not train a model, and does not support PDF/DOCX extraction
-or child-table migration until a later parser/migration phase.
+to 100 rows, does not train a model, and does not support PDF/DOCX structured
+mapping or child-table migration until a later migration phase.
+
+## Phase 16 safe document text extraction
+
+Phase 16 adds a read-only parser boundary for text-based PDF and DOCX uploads.
+The parser uses only the standard library, applies bounded stream/archive/XML
+limits, ignores embedded files and macros, and returns a compact text excerpt.
+It does not perform OCR, follow external links, read arbitrary archive parts,
+or create, update or import any ERP document.
+
+PDF and DOCX previews are marked `structured: false`. They can be reviewed in
+the conversation, but the import planner refuses them until a later phase
+defines explicit field extraction and validation for document prose. CSV, TSV,
+JSON and existing text previews retain their previous contracts, while text
+extraction is never treated as model training.
+
+The parser rejects malformed, encrypted, oversized or text-free documents with
+a Copilot-safe message. Scanned PDFs therefore remain preview-ineligible until
+OCR is deliberately designed and permissioned.

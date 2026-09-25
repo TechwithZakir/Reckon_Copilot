@@ -86,6 +86,8 @@ def prepare_document_import_plan(
         )
         raw = base64.b64decode(str(content or ""), validate=True)
         preview = build_document_preview(file_name, raw, mime_type=mime_type)
+        if preview.get("structured") is False:
+            return _safe_error("This file can be previewed as text, but structured import mapping is not available yet.")
         plan = build_import_plan(
             preview,
             target,

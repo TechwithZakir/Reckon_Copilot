@@ -243,8 +243,9 @@ any unknown-field warnings. Confirm the result says that no ERP document was
 created or changed. Try an empty file, an unsupported PDF/DOCX file and a file
 larger than 4 MB; each should show a useful Copilot message without a Frappe
 error modal. Confirm the preview is permission-scoped and does not create an
-ERP record. PDF/DOCX extraction, approval and final import are reserved for a
-later phase.
+ERP record. At this stage PDF/DOCX files should be rejected with a clear
+unsupported-format message; extraction, approval and final import are reserved
+for later phases.
 
 ## Phase 14 Verification
 
@@ -282,4 +283,25 @@ in the attachment, change the target plan, use an expired token, or retry as a
 user without native create permission; each must be rejected before insertion
 and remain inside Copilot without a Frappe error modal. Confirm a failed
 multi-row insert rolls back and is marked failed in the audit record. No PDF,
-DOCX, child-table migration or model-training behavior is included.
+DOCX structured mapping, child-table migration or model-training behavior is
+included.
+
+## Phase 16 Verification
+
+Phase 16 adds bounded, read-only text extraction for text-based PDF and DOCX
+files. Run the complete checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+.\.venv\Scripts\python.exe -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+On staging, open a permitted Form or List, attach a small text-based PDF and a
+DOCX, and confirm the conversation shows the format and bounded readable
+excerpt. Confirm it says that the result is for review only and that no
+structured import-plan button appears. Try a scanned/text-free PDF, malformed
+DOCX, encrypted DOCX and oversized archive; each must show a useful Copilot
+message without a Frappe error modal. Confirm no ERP record is created or
+changed and no model-training data is produced.

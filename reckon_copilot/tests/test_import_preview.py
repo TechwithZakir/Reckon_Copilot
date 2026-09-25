@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import io
 import unittest
+import zipfile
+import zlib
 
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
 from reckon_copilot.imports.mapping import build_import_plan
@@ -35,8 +38,56 @@ class ImportPreviewTests(unittest.TestCase):
         self.assertTrue(any("not available" in warning for warning in preview["warnings"]))
 
     def test_unsupported_document_is_rejected_without_fallback_write(self):
-        with self.assertRaisesRegex(ImportPreviewError, "supports CSV"):
+        with self.assertRaisesRegex(ImportPreviewError, "no readable text"):
             build_document_preview("invoice.pdf", b"%PDF-1.7")
+
+    def test_pdf_preview_extracts_bounded_text_without_structured_rows(self):
+        stream = zlib.compress(b"BT /F1 12 Tf (Invoice total: 1250) Tj ET")
+        payload = (
+            b"%PDF-1.7\n1 0 obj\n<< /Length "
+            + str(len(stream)).encode()
+            + b" /Filter /FlateDecode >>\nstream\n"
+            + stream
+            + b"\nendstream\nendobj\n%%EOF"
+        )
+
+        preview = build_document_preview("invoice.pdf", payload, mime_type="application/pdf")
+
+        self.assertEqual(preview["format"], "pdf")
+        self.assertEqual(preview["record_count"], 0)
+        self.assertFalse(preview["structured"])
+        self.assertIn("Invoice total: 1250", preview["text_excerpt"])
+        self.assertTrue(any("structured import mapping" in warning for warning in preview["warnings"]))
+
+    def test_docx_preview_extracts_document_body_without_reading_embedded_files(self):
+        document_xml = (
+            b'<?xml version="1.0" encoding="UTF-8"?>'
+            b'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            b'<w:body><w:p><w:r><w:t>Invoice total: </w:t></w:r><w:r><w:t>1250</w:t></w:r></w:p>'
+            b'<w:p><w:r><w:t>Approval required.</w:t></w:r></w:p></w:body></w:document>'
+        )
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("word/document.xml", document_xml)
+            archive.writestr("word/media/ignored.bin", b"should not be read")
+
+        preview = build_document_preview(
+            "invoice.docx",
+            buffer.getvalue(),
+            mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+        self.assertEqual(preview["format"], "docx")
+        self.assertFalse(preview["structured"])
+        self.assertEqual(preview["record_count"], 0)
+        self.assertIn("Invoice total: 1250", preview["text_excerpt"])
+        self.assertIn("Approval required.", preview["text_excerpt"])
+
+    def test_text_extraction_cannot_be_promoted_to_an_import_plan(self):
+        preview = build_document_preview("manual.pdf", b"%PDF-1.7\n1 0 obj\nstream\nBT (Read only) Tj ET\nendstream")
+
+        with self.assertRaisesRegex(ValueError, "structured import mapping"):
+            build_import_plan(preview, "Sales Order", [{"fieldname": "customer", "fieldtype": "Data"}])
 
     def test_empty_or_oversized_document_is_rejected(self):
         with self.assertRaises(ImportPreviewError):

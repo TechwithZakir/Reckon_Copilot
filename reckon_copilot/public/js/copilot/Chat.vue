@@ -171,6 +171,8 @@ function completeImportPreview(message, response, attachment) {
   message.sourceAttachment = attachment;
   const summary = recordCount
     ? `Preview ready: ${recordCount} record${recordCount === 1 ? "" : "s"} found in ${preview.file_name || "the attachment"}.`
+    : preview.text_excerpt
+      ? `Readable text extracted from ${preview.file_name || "the attachment"}. It is ready for review; structured import mapping is not available for this format.`
     : "No records were found in the attachment. The preview is still read-only.";
   finishProgress(message, {
     role: "assistant",
@@ -606,6 +608,9 @@ onBeforeUnmount(() => {
               <b>{{ cell.label }}:</b> {{ cell.value }}
             </span>
           </div>
+          <p v-if="message.importPreview.text_excerpt" class="rc-import-excerpt">
+            {{ message.importPreview.text_excerpt }}
+          </p>
           <p v-if="message.importPreview.suggestedDoctypes?.length" class="rc-import-suggestion">
             Possible DocType: {{ message.importPreview.suggestedDoctypes.join(", ") }}
           </p>
@@ -614,7 +619,7 @@ onBeforeUnmount(() => {
           </ul>
           <small class="rc-analytics-source">Preview only · No ERP document was created or changed.</small>
           <button
-            v-if="message.sourceAttachment && !message.importPlan && (message.importPreview.target_doctype || routeContext?.doctype || message.importPreview.suggestedDoctypes?.length)"
+            v-if="message.sourceAttachment && message.importPreview.structured !== false && !message.importPlan && (message.importPreview.target_doctype || routeContext?.doctype || message.importPreview.suggestedDoctypes?.length)"
             class="rc-import-plan-button"
             type="button"
             :disabled="message.importingPlan"
@@ -734,7 +739,7 @@ onBeforeUnmount(() => {
       ref="fileInput"
       class="rc-sr-only"
       type="file"
-      accept=".csv,.tsv,.json,.txt,.md,text/csv,application/json,text/plain"
+      accept=".csv,.tsv,.json,.txt,.md,.pdf,.docx,text/csv,application/json,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       @change="handleFileSelected"
     />
     <div v-if="selectedFile" class="rc-attachment-chip">

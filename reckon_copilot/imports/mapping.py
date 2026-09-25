@@ -27,6 +27,8 @@ def build_import_plan(
     """Build a deterministic, write-free mapping and validation plan."""
     if not isinstance(preview, dict):
         raise ValueError("A valid document preview is required.")
+    if preview.get("structured") is False:
+        raise ValueError("This document contains readable text, but structured import mapping is not available yet.")
     doctype = str(target_doctype or "").strip()
     if not doctype:
         raise ValueError("Choose a target DocType before preparing an import plan.")
