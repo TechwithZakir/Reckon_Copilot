@@ -109,15 +109,8 @@ export function previewAction(context, action, values = {}) {
   });
 }
 
-export function approvePreview(plan) {
+export function confirmAction(plan) {
   return call("reckon_copilot.api.actions.approve_preview", { plan });
-}
-
-export function executeAction(plan, approvalToken) {
-  return call("reckon_copilot.api.actions.execute_action", {
-    plan,
-    approval_token: approvalToken,
-  });
 }
 
 export function previewDocumentImport(fileName, content, mimeType, context, targetDoctype = "") {

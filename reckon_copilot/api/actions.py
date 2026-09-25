@@ -4,9 +4,8 @@ import json
 from typing import Any
 
 from reckon_copilot.actions.planner import plan_action
-from reckon_copilot.actions.approval import issue_approval_token
-from reckon_copilot.actions.executor import ActionExecutionError, FrappeActionAuditStore, execute_approved_plan, record_approval
-from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionDenied
+from reckon_copilot.actions.executor import ActionExecutionError, execute_confirmed_plan
+from reckon_copilot.permissions.boundary import FrappePermissionAdapter, PermissionDenied
 
 
 def _whitelist(**kwargs: Any):
@@ -40,36 +39,18 @@ def preview_action(context: Any = None, action: str = "", values: Any = None) ->
 
 @_whitelist(allow_guest=False)
 def approve_preview(plan: Any = None) -> dict[str, Any]:
-    """Issue a scoped approval token after rechecking the exact target."""
+    """Confirm a visible preview and execute it once after native permission checks."""
     try:
         import frappe  # type: ignore
         payload = json.loads(plan) if isinstance(plan, str) else plan
         if not isinstance(payload, dict) or not payload.get("plan_hash"):
             return _safe_error("A valid action plan is required.")
-        target = payload.get("target") if isinstance(payload.get("target"), dict) else {}
-        permission_context = {
-            "page_type": "Form",
-            "doctype": target.get("doctype"),
-            "document_name": target.get("document_name"),
-        }
-        CopilotPermissionBoundary(FrappePermissionAdapter(frappe)).authorize_action(
-            permission_context,
-            str(payload.get("action") or ""),
-            user=frappe.session.user,
-        )
-        token = issue_approval_token(
+        return execute_confirmed_plan(
             payload,
+            frappe_module=frappe,
             user=frappe.session.user,
             site=getattr(frappe.local, "site", "default"),
         )
-        record_approval(
-            payload,
-            token,
-            user=frappe.session.user,
-            site=getattr(frappe.local, "site", "default"),
-            audit_store=FrappeActionAuditStore(frappe),
-        )
-        return {"ok": True, "approved": True, "execution": "ready_to_execute", "approval_token": token}
     except PermissionDenied as error:
         return _safe_error(str(error), access_denied=True)
     except (TypeError, ValueError) as error:
@@ -77,31 +58,7 @@ def approve_preview(plan: Any = None) -> dict[str, Any]:
     except ActionExecutionError as error:
         return _safe_error(str(error))
     except Exception:
-        return _safe_error("Approval could not be recorded. No ERP data was changed.")
-
-
-@_whitelist(allow_guest=False)
-def execute_action(plan: Any = None, approval_token: str = "") -> dict[str, Any]:
-    """Execute only an unchanged plan with a user-scoped approval token."""
-    import frappe  # type: ignore
-
-    payload = json.loads(plan) if isinstance(plan, str) else plan
-    if not isinstance(payload, dict) or not payload.get("plan_hash"):
-        return {"ok": False, "message": "A valid approved plan is required."}
-    try:
-        return execute_approved_plan(
-            payload,
-            approval_token,
-            frappe_module=frappe,
-            user=frappe.session.user,
-            site=getattr(frappe.local, "site", "default"),
-        )
-    except PermissionDenied as error:
-        return {"ok": False, "access_denied": True, "message": str(error)}
-    except (ActionExecutionError, ValueError) as error:
-        return {"ok": False, "message": str(error)}
-    except Exception:
-        return {"ok": False, "message": "Action could not be completed. No changes were committed."}
+        return _safe_error("Action could not be completed. No changes were committed.")
 
 
 def _safe_error(message: str, *, access_denied: bool = False) -> dict[str, Any]:

@@ -3,12 +3,10 @@ from __future__ import annotations
 import unittest
 from types import SimpleNamespace
 
-from reckon_copilot.actions.approval import issue_approval_token
 from reckon_copilot.actions.executor import (
     ActionExecutionError,
     InMemoryAuditStore,
-    execute_approved_plan,
-    record_approval,
+    execute_confirmed_plan,
 )
 from reckon_copilot.actions.planner import plan_action
 from reckon_copilot.permissions.boundary import PermissionDenied, StaticPermissionAdapter
@@ -69,7 +67,7 @@ class _FakeFrappe:
         return self.document
 
 
-def _approved_plan(action="update", values=None):
+def _plan(action="update", values=None):
     plan = plan_action(
         {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
         action,
@@ -86,43 +84,31 @@ def _approved_plan(action="update", values=None):
             },
         ),
     )["plan"]
-    token = issue_approval_token(plan, user="Administrator", site="test.local")
-    return plan, token
-
-
-def _approved_store(plan, token):
-    store = InMemoryAuditStore()
-    record_approval(
-        plan,
-        token,
-        user="Administrator",
-        site="test.local",
-        audit_store=store,
-    )
-    return store
+    return plan
 
 
 class ActionExecutorTests(unittest.TestCase):
-    def test_execution_requires_native_approval_record(self):
-        plan, token = _approved_plan()
+    def test_execution_requires_user_confirmation(self):
+        plan = _plan()
         frappe = _FakeFrappe()
+        store = InMemoryAuditStore()
 
-        with self.assertRaisesRegex(ActionExecutionError, "Approve this action"):
-            execute_approved_plan(
-                plan,
-                token,
-                frappe_module=frappe,
-                user="Administrator",
-                site="test.local",
-                audit_store=InMemoryAuditStore(),
-            )
+        result = execute_confirmed_plan(
+            plan,
+            frappe_module=frappe,
+            user="Administrator",
+            site="test.local",
+            audit_store=store,
+        )
 
-        self.assertFalse(frappe.document.saved)
+        self.assertTrue(result["ok"])
+        self.assertTrue(frappe.document.saved)
+        self.assertEqual(store.records[plan["plan_hash"]]["approved_by"], "Administrator")
 
-    def test_executes_approved_update_and_is_idempotent(self):
-        plan, token = _approved_plan()
+    def test_confirmed_update_is_idempotent(self):
+        plan = _plan()
         frappe = _FakeFrappe()
-        store = _approved_store(plan, token)
+        store = InMemoryAuditStore()
         adapter = StaticPermissionAdapter(
             user="Administrator",
             roles={"System Manager"},
@@ -132,18 +118,16 @@ class ActionExecutorTests(unittest.TestCase):
             },
         )
 
-        first = execute_approved_plan(
+        first = execute_confirmed_plan(
             plan,
-            token,
             frappe_module=frappe,
             user="Administrator",
             site="test.local",
             permission_adapter=adapter,
             audit_store=store,
         )
-        second = execute_approved_plan(
+        second = execute_confirmed_plan(
             plan,
-            token,
             frappe_module=frappe,
             user="Administrator",
             site="test.local",
@@ -156,43 +140,39 @@ class ActionExecutorTests(unittest.TestCase):
         self.assertTrue(second["idempotent"])
 
     def test_changed_plan_is_rejected_before_mutation(self):
-        plan, token = _approved_plan()
-        store = _approved_store(plan, token)
+        plan = _plan()
         plan["values"]["customer"] = "Changed after approval"
         frappe = _FakeFrappe()
 
         with self.assertRaises(ActionExecutionError):
-            execute_approved_plan(
+            execute_confirmed_plan(
                 plan,
-                token,
                 frappe_module=frappe,
                 user="Administrator",
                 site="test.local",
-                audit_store=store,
+                audit_store=InMemoryAuditStore(),
             )
 
         self.assertFalse(frappe.document.saved)
 
     def test_approved_update_cannot_write_protected_field(self):
-        plan, token = _approved_plan(values={"modified": "forbidden"})
+        plan = _plan(values={"modified": "forbidden"})
         frappe = _FakeFrappe()
 
         with self.assertRaises(ActionExecutionError):
-            store = _approved_store(plan, token)
-            execute_approved_plan(
+            execute_confirmed_plan(
                 plan,
-                token,
                 frappe_module=frappe,
                 user="Administrator",
                 site="test.local",
-                audit_store=store,
+                audit_store=InMemoryAuditStore(),
             )
 
         self.assertEqual(frappe.db.rollback_count, 1)
         self.assertFalse(frappe.document.saved)
 
     def test_permission_is_rechecked_immediately_before_mutation(self):
-        plan, token = _approved_plan()
+        plan = _plan()
         frappe = _FakeFrappe()
         read_only_adapter = StaticPermissionAdapter(
             user="Administrator",
@@ -201,15 +181,13 @@ class ActionExecutorTests(unittest.TestCase):
         )
 
         with self.assertRaises(PermissionDenied):
-            store = _approved_store(plan, token)
-            execute_approved_plan(
+            execute_confirmed_plan(
                 plan,
-                token,
                 frappe_module=frappe,
                 user="Administrator",
                 site="test.local",
                 permission_adapter=read_only_adapter,
-                audit_store=store,
+                audit_store=InMemoryAuditStore(),
             )
 
         self.assertFalse(frappe.document.saved)

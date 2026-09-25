@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import json
-import hmac
-import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from reckon_copilot.actions.approval import hash_approval_token, validate_approval_token
 from reckon_copilot.context.builders import canonical_json
 from reckon_copilot.knowledge.models import stable_hash
 from reckon_copilot.permissions.boundary import (
@@ -32,7 +29,7 @@ PROTECTED_FIELDS = {
 
 
 class ActionExecutionError(RuntimeError):
-    """Raised when an approved action cannot be applied safely."""
+    """Raised when a confirmed action cannot be applied safely."""
 
 
 class AuditStore(Protocol):
@@ -158,9 +155,8 @@ class FrappeActionAuditStore:
         )
 
 
-def execute_approved_plan(
+def execute_confirmed_plan(
     plan: dict[str, Any],
-    approval_token: str,
     *,
     frappe_module: Any,
     user: str,
@@ -168,36 +164,20 @@ def execute_approved_plan(
     permission_adapter: PermissionAdapter | None = None,
     audit_store: AuditStore | None = None,
 ) -> dict[str, Any]:
-    """Execute one unchanged, approved plan exactly once.
-
-    The plan hash and approval token are checked before the native Frappe
-    permission boundary is called again immediately before mutation.
-    """
+    """Execute one unchanged plan after the current user confirms its preview."""
     normalized = _validate_plan(plan)
     plan_hash = normalized["plan_hash"]
     expected_hash = stable_hash(canonical_json({key: value for key, value in normalized.items() if key != "plan_hash"}))
     if expected_hash != plan_hash:
-        raise ActionExecutionError("The approved plan changed and must be reviewed again.")
+        raise ActionExecutionError("The plan changed and must be reviewed again.")
 
     if normalized.get("user") and normalized["user"] != user:
-        raise ActionExecutionError("The approved plan belongs to a different user.")
+        raise ActionExecutionError("This plan belongs to a different user.")
 
     target = normalized["target"]
     action = normalized["action"]
     store = audit_store or FrappeActionAuditStore(frappe_module)
     existing = store.find(plan_hash, user, site)
-    if not existing or existing.get("status") not in {"approved", "completed"}:
-        raise ActionExecutionError("Approve this action before executing it.")
-    validate_approval_token(
-        approval_token,
-        plan_hash=plan_hash,
-        user=user,
-        site=site,
-    )
-    if not hmac.compare_digest(hash_approval_token(approval_token), str(existing.get("approval_token_hash") or "")):
-        raise ActionExecutionError("This approval token is not valid for the selected action.")
-    if int(existing.get("approval_expires_at") or 0) < int(time.time()):
-        raise ActionExecutionError("Approval expired. Prepare the action again.")
     permission_context = {
         "page_type": "Form",
         "doctype": target["doctype"],
@@ -215,8 +195,22 @@ def execute_approved_plan(
             "result_name": existing.get("result_name") or None,
         }
     if existing and existing.get("status") == "started":
-        raise ActionExecutionError("This approved action is already in progress.")
+        raise ActionExecutionError("This action is already in progress.")
 
+    audit_id = store.approve(
+        {
+            "plan_hash": plan_hash,
+            "action": action,
+            "target_doctype": target["doctype"],
+            "target_name": target.get("document_name") or "",
+            "user": user,
+            "site": site,
+            "approved_by": user,
+            "approval_token_hash": "",
+            "approval_expires_at": 0,
+            "plan_payload": json.dumps(normalized, sort_keys=True, ensure_ascii=True),
+        }
+    )
     audit_id = store.start(
         {
             "plan_hash": plan_hash,
@@ -246,54 +240,20 @@ def execute_approved_plan(
         raise ActionExecutionError("Action failed; no changes were committed.") from error
 
 
-def record_approval(
-    plan: dict[str, Any],
-    approval_token: str,
-    *,
-    user: str,
-    site: str,
-    audit_store: AuditStore,
-) -> str:
-    """Persist native server-side approval state for one unchanged plan."""
-    normalized = _validate_plan(plan)
-    plan_hash = normalized["plan_hash"]
-    expected_hash = stable_hash(canonical_json({key: value for key, value in normalized.items() if key != "plan_hash"}))
-    if expected_hash != plan_hash:
-        raise ActionExecutionError("The action plan changed and must be reviewed again.")
-    payload = validate_approval_token(approval_token, plan_hash=plan_hash, user=user, site=site)
-    existing = audit_store.find(plan_hash, user, site)
-    if existing and existing.get("status") == "completed":
-        raise ActionExecutionError("This action has already been completed.")
-    return audit_store.approve(
-        {
-            "plan_hash": plan_hash,
-            "action": normalized["action"],
-            "target_doctype": normalized["target"]["doctype"],
-            "target_name": normalized["target"].get("document_name") or "",
-            "user": user,
-            "site": site,
-            "approval_token_hash": hash_approval_token(approval_token),
-            "approval_expires_at": int(payload["expires_at"]),
-            "approved_by": user,
-            "plan_payload": json.dumps(normalized, sort_keys=True, ensure_ascii=True),
-        }
-    )
-
-
 def _validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(plan, dict) or plan.get("version") != "v1":
-        raise ActionExecutionError("A valid approved plan is required.")
+        raise ActionExecutionError("A valid action plan is required.")
     action = str(plan.get("action") or "").strip().lower()
     target = plan.get("target")
     values = plan.get("values")
     if action not in ACTION_TYPES or not isinstance(target, dict) or not isinstance(values, dict):
-        raise ActionExecutionError("The approved plan is incomplete.")
+        raise ActionExecutionError("The action plan is incomplete.")
     doctype = str(target.get("doctype") or "").strip()
     if not doctype or any(char in doctype for char in "\r\n"):
-        raise ActionExecutionError("The approved plan has no valid target DocType.")
+        raise ActionExecutionError("The action plan has no valid target DocType.")
     plan_hash = str(plan.get("plan_hash") or "").strip()
     if len(plan_hash) != 64:
-        raise ActionExecutionError("The approved plan has an invalid hash.")
+        raise ActionExecutionError("The action plan has an invalid hash.")
     clean = dict(plan)
     clean["action"] = action
     clean["target"] = {"doctype": doctype, "document_name": target.get("document_name")}
@@ -336,7 +296,7 @@ def _apply_values(doc: Any, values: dict[str, Any]) -> None:
     fields = {str(getattr(field, "fieldname", "")) for field in getattr(meta, "fields", [])}
     unknown = [key for key in values if str(key) in PROTECTED_FIELDS or (fields and str(key) not in fields)]
     if unknown:
-        raise ActionExecutionError(f"The approved plan contains unsupported fields: {', '.join(map(str, unknown[:5]))}.")
+        raise ActionExecutionError(f"The confirmed plan contains unsupported fields: {', '.join(map(str, unknown[:5]))}.")
     for key, value in values.items():
         setter = getattr(doc, "set", None)
         if callable(setter):

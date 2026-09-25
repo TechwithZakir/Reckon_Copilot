@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 
-import { approvePreview, executeAction, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, recordSuggestionFeedback, savePreferences } from "./api";
+import { confirmAction, getAgentAdvice, getInsights, getNotifications, getShellConfig, previewAction, recordSuggestionFeedback, savePreferences } from "./api";
 import Chat from "./Chat.vue";
 import ActionApproval from "./ActionApproval.vue";
 import ContextHeader from "./ContextHeader.vue";
@@ -29,7 +29,7 @@ const models = ref([]);
 const selectedModel = ref("");
 const agentMode = ref("copilot");
 const actionPlan = ref(null);
-const actionApprovalToken = ref("");
+const actionExecuting = ref(false);
 const showAllActions = ref(false);
 const showAllQuestions = ref(false);
 const ACTION_PREVIEW_LIMIT = 5;
@@ -170,7 +170,6 @@ async function requestActionPreview(action) {
   try {
     const result = await previewAction(props.routeContext, action);
     if (result?.plan) {
-      actionApprovalToken.value = "";
       actionPlan.value = result.plan;
     }
   } catch (error) {
@@ -222,33 +221,16 @@ function toggleQuestions() {
 }
 
 async function approveActionPlan() {
-  if (!actionPlan.value) return;
+  if (!actionPlan.value || actionExecuting.value) return;
+  actionExecuting.value = true;
   try {
-    const result = await approvePreview(actionPlan.value);
-    if (result?.approval_token) {
-      actionApprovalToken.value = result.approval_token;
-      actionPlan.value = {
-        ...actionPlan.value,
-        approval_status: "approved",
-        execution: result.execution || "ready_to_execute",
-      };
-    } else if (result?.message) {
-      actionPlan.value = { ...actionPlan.value, error: result.message };
-    }
-  } catch (error) {
-    actionPlan.value = { error: error.message || "Approval could not be recorded." };
-  }
-}
-
-async function executeApprovedAction() {
-  if (!actionPlan.value || !actionApprovalToken.value) return;
-  try {
-    const result = await executeAction(actionPlan.value, actionApprovalToken.value);
+    const result = await confirmAction(actionPlan.value);
     if (!result?.ok) throw new Error(result?.message || "Action could not be completed.");
     actionPlan.value = null;
-    actionApprovalToken.value = "";
   } catch (error) {
     actionPlan.value = { ...actionPlan.value, error: error.message || "Action could not be completed." };
+  } finally {
+    actionExecuting.value = false;
   }
 }
 
@@ -583,10 +565,9 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
       <ActionApproval
         v-if="actionPlan"
         :plan="actionPlan"
-        :approved="Boolean(actionApprovalToken)"
+        :busy="actionExecuting"
         @close="actionPlan = null"
         @approve="approveActionPlan"
-        @execute="executeApprovedAction"
       />
     </template>
   </aside>

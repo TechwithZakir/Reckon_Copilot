@@ -36,16 +36,17 @@ The model selector is positioned in the runtime footer beside the LLM provider s
 
 The runtime footer uses responsive alignment for provider and model controls. Placeholder usage text was removed; actual token estimates remain attached to completed conversation responses.
 
-Phase 9 now includes a preview-first action planner for create, update, delete, submit and approve intents. Plans are permission-bound, redact secret-like values, mark high-risk operations, require confirmation metadata and carry a deterministic plan hash. Execution remains disabled until the explicit approval and audit workflow is implemented.
+Phase 9 now includes a preview-first action planner for create, update, delete, submit and approve intents. Plans are permission-bound, redact secret-like values, mark high-risk operations, require confirmation metadata and carry a deterministic plan hash. The current user sees the preview and explicitly confirms once; the server then rechecks native Frappe access, applies the transaction and records the audit result.
 
-The frontend API boundary now exposes preview requests for the upcoming approval dialog. No execution endpoint is exposed; the next UI step must render the plan, risk and hash and require explicit approval before any future execution capability is enabled.
+The frontend API boundary exposes preview requests and one confirmation call. The confirmation call is the execution boundary; it is available only after the user has reviewed the visible plan, risk and hash.
 
-The Copilot panel now renders a preview approval dialog for Form contexts, including target, execution mode, risk and plan hash. Approving closes the preview only; it does not execute an ERPNext write.
+The Copilot panel renders a preview confirmation dialog for Form contexts, including target, mapped values, risk and plan hash. Clicking `Approve` completes the transaction immediately after the server rechecks native access. Canceling or closing never writes.
 
-Phase 9 initially issued short-lived approval tokens scoped to the exact plan
-hash, user and site. The current controlled-write path stores the token hash in
-the native `Copilot Action Audit` record, so no site-level signing secret is
-required.
+Phase 9 initially experimented with short-lived approval tokens. The current
+action path does not expose or require those tokens: the signed-in user's
+explicit confirmation and native Frappe permission check are sufficient. The
+native `Copilot Action Audit` record still stores the confirming user, exact
+plan payload, result and any failure.
 
 ## Phase 9 completion
 
