@@ -6,9 +6,9 @@ from typing import Any
 
 from reckon_copilot.actions.approval import issue_approval_token
 from reckon_copilot.actions.executor import FrappeActionAuditStore
-from reckon_copilot.imports.mapping import build_import_plan
+from reckon_copilot.imports.mapping import build_extracted_import_plan, build_import_plan
 from reckon_copilot.imports.executor import ImportExecutionError, execute_import_plan, record_import_approval
-from reckon_copilot.imports.extraction import build_field_extraction_preview
+from reckon_copilot.imports.extraction import build_field_extraction_preview, sanitize_extracted_record
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
 from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionDenied, authorize_context
 
@@ -109,6 +109,50 @@ def prepare_document_import_plan(
 
 
 @_whitelist(allow_guest=False)
+def prepare_extracted_document_import_plan(
+    file_name: str = "",
+    content: str = "",
+    mime_type: str = "",
+    context: Any = None,
+    target_doctype: str = "",
+    reviewed_record: Any = None,
+) -> dict[str, Any]:
+    """Prepare a review-only plan from corrected PDF/DOCX field candidates."""
+    try:
+        import frappe  # type: ignore
+
+        page_context = json.loads(context) if isinstance(context, str) else context
+        if not isinstance(page_context, dict):
+            return _safe_error("Open the target ERP page before preparing an extracted-field plan.")
+        target = str(target_doctype or "").strip()
+        adapter = FrappePermissionAdapter(frappe)
+        CopilotPermissionBoundary(adapter).authorize_import_preview(
+            page_context,
+            target,
+            user=frappe.session.user,
+        )
+        raw = base64.b64decode(str(content or ""), validate=True)
+        preview = build_document_preview(file_name, raw, mime_type=mime_type)
+        if preview.get("structured") is not False or preview.get("format") not in {"pdf", "docx"}:
+            return _safe_error("Extracted-field review is available only for PDF and DOCX previews.")
+        fields = _target_schema(frappe, target)
+        reviewed = sanitize_extracted_record(
+            reviewed_record,
+            allowed_fields={str(field.get("fieldname") or "") for field in fields},
+        )
+        plan = build_extracted_import_plan(preview, target, fields, reviewed)
+        return {"ok": True, "plan": plan}
+    except ImportPreviewError as error:
+        return _safe_error(str(error))
+    except PermissionDenied as error:
+        return _safe_error(str(error), access_denied=True)
+    except (ValueError, TypeError) as error:
+        return _safe_error(str(error))
+    except Exception:
+        return _safe_error("The extracted-field plan could not be prepared. No ERP data was changed.")
+
+
+@_whitelist(allow_guest=False)
 def approve_document_import_plan(plan: Any = None) -> dict[str, Any]:
     """Approve one unchanged import plan without executing it."""
     try:
@@ -117,6 +161,8 @@ def approve_document_import_plan(plan: Any = None) -> dict[str, Any]:
         payload = json.loads(plan) if isinstance(plan, str) else plan
         if not isinstance(payload, dict) or not payload.get("plan_hash"):
             return _safe_error("A valid import plan is required.")
+        if payload.get("version") != "v1" or payload.get("execution") != "preview_only" or not payload.get("ready_for_approval"):
+            return _safe_error("This plan is review-only and cannot be approved or executed yet.")
         target = str(payload.get("target_doctype") or "").strip()
         source_id = str(payload.get("source_preview_id") or "").strip()
         permission_context = {

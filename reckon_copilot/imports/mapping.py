@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from reckon_copilot.context.builders import canonical_json
+from reckon_copilot.imports.extraction import sanitize_extracted_record
 from reckon_copilot.knowledge.models import stable_hash
 
 
@@ -98,6 +99,50 @@ def build_import_plan(
         "execution": "preview_only",
         "model_training": False,
     }
+    plan["plan_hash"] = stable_hash(canonical_json(plan))
+    return plan
+
+
+def build_extracted_import_plan(
+    preview: dict[str, Any],
+    target_doctype: str,
+    target_fields: list[dict[str, Any]],
+    reviewed_record: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate reviewed PDF/DOCX candidates without enabling execution."""
+    if not isinstance(preview, dict) or preview.get("structured") is not False:
+        raise ValueError("A PDF or DOCX text preview is required for extracted field review.")
+    allowed_fields = [
+        str(field.get("fieldname") or "").strip()
+        for field in target_fields
+        if isinstance(field, dict)
+    ]
+    record = sanitize_extracted_record(reviewed_record, allowed_fields=allowed_fields)
+    synthetic_preview = {
+        "version": "v1-extracted",
+        "preview_id": str(preview.get("preview_id") or ""),
+        "file_name": str(preview.get("file_name") or "")[:180],
+        "format": preview.get("format"),
+        "structured": True,
+        "fields": list(record),
+        "records": (record,),
+    }
+    plan = build_import_plan(
+        synthetic_preview,
+        target_doctype,
+        target_fields,
+    )
+    plan["version"] = "v1-extracted-review"
+    plan["source_format"] = str(preview.get("format") or "")
+    plan["extraction_method"] = str(preview.get("extraction_method") or "deterministic_label_match")
+    plan["extraction_status"] = "review_only"
+    plan["reviewed_record"] = record
+    plan["ready_for_approval"] = False
+    plan["execution"] = "review_only"
+    plan["warnings"] = [
+        *plan.get("warnings", []),
+        "PDF/DOCX extracted values are review-only; approval and execution are not available yet.",
+    ][:MAX_WARNINGS]
     plan["plan_hash"] = stable_hash(canonical_json(plan))
     return plan
 

@@ -327,3 +327,24 @@ only, and no `Prepare import plan` button appears for PDF/DOCX. Try a document
 with no labels and confirm it reports that nothing was extracted without a
 Frappe error modal. Confirm no ERP record, approval token or model-training
 record is created.
+
+## Phase 18 Verification
+
+Phase 18 adds user-reviewed PDF/DOCX field plans without enabling writes. Run
+the complete checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+.\.venv\Scripts\python.exe -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+On a permitted invoice Form, attach a labeled PDF/DOCX and edit one extracted
+value in the panel. Select `Prepare review plan` and confirm the plan shows
+the corrected value, required-field/type errors and `review_only` behavior.
+Confirm there is no `Approve import` button. Call the approval endpoint with
+the returned plan and confirm it is refused as review-only. Try adding a field
+not present on the target DocType; confirm the server rejects it without a
+Frappe error modal. Confirm no ERP record, approval token or model-training
+record is created.

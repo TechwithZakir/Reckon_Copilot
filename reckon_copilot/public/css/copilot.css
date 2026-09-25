@@ -1499,14 +1499,26 @@
   font-size: 9px;
 }
 
-.rc-import-extracted-row em {
+.rc-import-extracted-input {
+  min-width: 0;
   max-width: 52%;
+  padding: 4px 6px;
+  border: 1px solid #d5e5f8;
+  border-radius: 5px;
+  background: #f8fbff;
   color: #315f9a;
+  font: inherit;
   font-size: 10px;
-  font-style: normal;
   font-weight: 700;
   overflow-wrap: anywhere;
   text-align: right;
+}
+
+.rc-import-extracted-input:focus {
+  border-color: #8ebdff;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(47 128 255 / 10%);
 }
 
 .rc-import-suggestion {

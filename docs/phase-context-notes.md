@@ -531,3 +531,17 @@ label that supplied the value. This is deterministic parsing, not an LLM
 decision and not automatic model training. The preview remains
 `structured: false`; extracted prose cannot be promoted into an import plan,
 approval token or ERP write in this phase.
+
+## Phase 18 reviewed extraction plan boundary
+
+Phase 18 lets a user correct extracted PDF/DOCX values in the panel and submit
+them to the same required-field, type and mapping validation used by structured
+imports. The server re-reads the upload, re-extracts the bounded text preview,
+accepts only fields from the target DocType schema, and returns a stable
+review-only plan hash.
+
+These plans use `version: v1-extracted-review`, `execution: review_only` and
+`ready_for_approval: false`. They cannot receive an approval token or reach the
+import executor. No ERP document is created, updated, submitted, approved or
+deleted. A later migration phase must define re-extraction of the reviewed
+values before PDF/DOCX writes can be considered.

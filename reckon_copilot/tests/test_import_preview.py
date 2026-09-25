@@ -7,7 +7,7 @@ import zipfile
 import zlib
 
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
-from reckon_copilot.imports.mapping import build_import_plan
+from reckon_copilot.imports.mapping import build_extracted_import_plan, build_import_plan
 from reckon_copilot.imports.extraction import build_field_extraction_preview
 
 
@@ -120,6 +120,40 @@ class ImportPreviewTests(unittest.TestCase):
 
         self.assertEqual(extraction["extracted_fields"], [])
         self.assertTrue(any("selected DocType" in warning for warning in extraction["extraction_warnings"]))
+
+    def test_extracted_review_plan_validates_values_but_cannot_be_approved(self):
+        plan = build_extracted_import_plan(
+            {
+                "structured": False,
+                "preview_id": "a" * 64,
+                "file_name": "invoice.pdf",
+                "format": "pdf",
+                "extraction_method": "deterministic_label_match",
+            },
+            "Purchase Invoice",
+            [
+                {"fieldname": "bill_no", "label": "Bill No", "fieldtype": "Data", "reqd": True},
+                {"fieldname": "posting_date", "label": "Posting Date", "fieldtype": "Date", "reqd": True},
+                {"fieldname": "grand_total", "label": "Grand Total", "fieldtype": "Currency", "reqd": True},
+            ],
+            {"bill_no": "PINV-0042", "posting_date": "2026-09-24", "grand_total": "1250.00"},
+        )
+
+        self.assertEqual(plan["version"], "v1-extracted-review")
+        self.assertEqual(plan["execution"], "review_only")
+        self.assertFalse(plan["ready_for_approval"])
+        self.assertEqual(plan["row_count"], 1)
+        self.assertEqual(plan["error_count"], 0)
+        self.assertEqual(len(plan["plan_hash"]), 64)
+
+    def test_extracted_review_plan_rejects_fields_outside_target_schema(self):
+        with self.assertRaisesRegex(ValueError, "not available"):
+            build_extracted_import_plan(
+                {"structured": False, "preview_id": "b" * 64, "file_name": "invoice.docx", "format": "docx"},
+                "Purchase Invoice",
+                [{"fieldname": "bill_no", "fieldtype": "Data"}],
+                {"grand_total": "1250.00"},
+            )
 
     def test_empty_or_oversized_document_is_rejected(self):
         with self.assertRaises(ImportPreviewError):

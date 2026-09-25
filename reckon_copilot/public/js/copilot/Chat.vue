@@ -5,6 +5,7 @@ import {
   askCopilotStream,
   approveDocumentImportPlan,
   executeDocumentImport,
+  prepareExtractedDocumentImportPlan,
   prepareDocumentImportPlan,
   previewDocumentImport,
   runAnalytics,
@@ -205,6 +206,42 @@ async function prepareImportPlan(message) {
     message.importPlan = response.plan || null;
   } catch (error) {
     message.importPlanError = error?.message || "The import plan could not be prepared.";
+  } finally {
+    message.importingPlan = false;
+    nextTick(scrollConversationToEnd);
+  }
+}
+
+async function prepareExtractedImportPlan(message) {
+  if (!message?.sourceAttachment || message.importingPlan) return;
+  const preview = message.importPreview || {};
+  const target = preview.target_doctype || props.routeContext?.doctype || preview.suggestedDoctypes?.[0] || "";
+  if (!target) {
+    message.importPlanError = "Open a target DocType page before preparing a review plan.";
+    return;
+  }
+  const fields = Array.isArray(preview.extracted_fields) ? preview.extracted_fields : [];
+  if (!fields.length) {
+    message.importPlanError = "No extracted fields are available to validate.";
+    return;
+  }
+  message.importingPlan = true;
+  message.importPlanError = "";
+  try {
+    const attachment = message.sourceAttachment;
+    const reviewedRecord = Object.fromEntries(fields.map((field) => [field.fieldname, field.value]));
+    const response = await prepareExtractedDocumentImportPlan(
+      attachment.name,
+      attachment.base64,
+      attachment.type,
+      props.routeContext,
+      target,
+      reviewedRecord,
+    );
+    if (!response?.ok) throw new Error(response?.message || "The review plan could not be prepared.");
+    message.importPlan = response.plan || null;
+  } catch (error) {
+    message.importPlanError = error?.message || "The review plan could not be prepared.";
   } finally {
     message.importingPlan = false;
     nextTick(scrollConversationToEnd);
@@ -618,7 +655,7 @@ onBeforeUnmount(() => {
                 <b>{{ field.label }}</b>
                 <small>{{ field.source }} · {{ field.confidence }} confidence</small>
               </span>
-              <em>{{ field.value }}</em>
+              <input v-model="field.value" class="rc-import-extracted-input" :aria-label="`Review ${field.label}`" />
             </div>
           </div>
           <ul v-if="message.importPreview.extraction_warnings?.length" class="rc-message-notes">
@@ -639,6 +676,15 @@ onBeforeUnmount(() => {
             @click="prepareImportPlan(message)"
           >
             {{ message.importingPlan ? "Preparing dry run..." : "Prepare import plan" }}
+          </button>
+          <button
+            v-if="message.sourceAttachment && message.importPreview.structured === false && message.importPreview.extracted_fields?.length && !message.importPlan && (message.importPreview.target_doctype || routeContext?.doctype || message.importPreview.suggestedDoctypes?.length)"
+            class="rc-import-plan-button"
+            type="button"
+            :disabled="message.importingPlan"
+            @click="prepareExtractedImportPlan(message)"
+          >
+            {{ message.importingPlan ? "Checking reviewed fields..." : "Prepare review plan" }}
           </button>
           <p v-if="message.importPlanError" class="rc-import-plan-error">{{ message.importPlanError }}</p>
           <div v-if="message.importPlan" class="rc-import-plan">
@@ -663,7 +709,8 @@ onBeforeUnmount(() => {
             <ul v-if="message.importPlan.warnings?.length" class="rc-message-notes">
               <li v-for="warning in message.importPlan.warnings" :key="warning">{{ warning }}</li>
             </ul>
-            <small class="rc-analytics-source">Dry run validated · Approval is required before any ERP document is created.</small>
+            <small v-if="message.importPlan.execution === 'review_only'" class="rc-analytics-source">Review plan only · PDF/DOCX approval and execution are not available yet.</small>
+            <small v-else class="rc-analytics-source">Dry run validated · Approval is required before any ERP document is created.</small>
             <div v-if="message.importPlan.ready_for_approval" class="rc-import-plan-actions">
               <button
                 v-if="!message.importApproved"

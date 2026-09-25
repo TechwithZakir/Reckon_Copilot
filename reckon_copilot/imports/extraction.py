@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from typing import Any, Iterable
@@ -80,6 +81,30 @@ def build_field_extraction_preview(
         "requires_approval": True,
         "model_training": False,
     }
+
+
+def sanitize_extracted_record(value: Any, *, allowed_fields: Iterable[str]) -> dict[str, str]:
+    """Accept only bounded values for fields exposed by the target DocType."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as error:
+            raise ValueError("The reviewed extracted fields are not valid JSON.") from error
+    if not isinstance(value, dict):
+        raise ValueError("Reviewed extracted fields must be an object.")
+    allowed = {str(field).strip() for field in allowed_fields if str(field).strip()}
+    unknown = sorted(str(key) for key in value if str(key) not in allowed)
+    if unknown:
+        raise ValueError(f"These extracted fields are not available on the selected DocType: {', '.join(unknown[:5])}.")
+    record: dict[str, str] = {}
+    for key, raw in list(value.items())[:MAX_EXTRACTED_FIELDS]:
+        fieldname = str(key).strip()
+        if not fieldname:
+            continue
+        if isinstance(raw, (dict, list)):
+            raise ValueError(f"The reviewed value for {fieldname} must be plain text.")
+        record[fieldname] = str(raw or "").strip()[:MAX_VALUE_LENGTH]
+    return record
 
 
 def _resolve_target(canonical: str, allowed: set[str]) -> str | None:

@@ -141,6 +141,17 @@ export function prepareDocumentImportPlan(fileName, content, mimeType, context, 
   });
 }
 
+export function prepareExtractedDocumentImportPlan(fileName, content, mimeType, context, targetDoctype, reviewedRecord = {}) {
+  return call("reckon_copilot.api.imports.prepare_extracted_document_import_plan", {
+    file_name: fileName,
+    content,
+    mime_type: mimeType,
+    context,
+    target_doctype: targetDoctype,
+    reviewed_record: reviewedRecord,
+  });
+}
+
 export function approveDocumentImportPlan(plan) {
   return call("reckon_copilot.api.imports.approve_document_import_plan", { plan });
 }
