@@ -16,15 +16,23 @@ Phase 6 is implemented as the local-first LLM provider path. The current impleme
 
 Phase 7 foundation is implemented as deterministic, permission-bound insights. The implementation adds a reusable `reckon_copilot.insights` responsibility area, a whitelisted insights API, structured findings with severity/source/confidence/suggested prompts, evidence compaction and visible Key Insights cards/counters in the Copilot panel.
 
-Phase 8 foundation is implemented as proactive, permission-bound notifications and alerts. The implementation adds a reusable `reckon_copilot.notifications` responsibility area, a whitelisted notifications API, deterministic alert IDs, panel-safe permission-denied alerts and a Copilot panel Alerts section driven by warning/critical findings.
-
-The next planned phase should extend notifications into persistence, user dismissal state and optional scheduled/server-pushed alert jobs after the latest Phase 8 commit is pushed, deployed, migrated if needed, cache-cleared and manually verified on the target bench.
+Phase 8 is complete. It delivered proactive, permission-bound notifications and
+alerts through a reusable `reckon_copilot.notifications` responsibility area,
+a whitelisted notifications API, deterministic alert IDs, panel-safe
+permission-denied alerts and a Copilot panel Alerts section driven by
+warning/critical findings. Persistence, dismissal state and scheduled jobs are
+optional product extensions, not unfinished work in the current plan.
 
 ## Phase 9 planned scope
 
-Phase 9 will add the Contextual Agent Advisor and Safe Action Planning layer. Its provider work must include a multi-model provider contract: administrators can configure an allowlisted set of models, the Copilot selector sends the selected model to the server, the server validates it against the active provider and capability policy, and the selected model is included in permission-safe cache identities and usage logs. The selector must never be cosmetic or allow arbitrary model names from the browser.
-
-Phase 9 implementation has started with a permission-bound Agent Advisor API and service. It generates context-specific read-only questions and review-plan actions for List, Form, Report, Dashboard and Workspace contexts. Mutating actions are intentionally not exposed yet; future action execution must add explicit approval and audit handling.
+Phase 9 is complete. It delivered the Contextual Agent Advisor and Safe Action
+Planning layer with a multi-model provider contract: administrators configure
+an allowlisted set of models, the Copilot selector sends the selected model to
+the server, the server validates it against the active provider and capability
+policy, and the selected model is included in permission-safe cache identities
+and usage logs. The advisor generates context-specific questions and
+preview-first action plans for List, Form, Report, Dashboard and Workspace
+contexts. Mutating execution is delivered by the completed Phase 12 boundary.
 
 The provider contract now includes an administrator-managed `Allowed Models` allowlist. Server-side provider selection rejects any model not in that allowlist; the future Copilot selector must consume these validated options and never submit arbitrary browser model names.
 
@@ -63,7 +71,7 @@ path.
 
 ## Phase 10 analytics agent
 
-Phase 10 adds a separate, read-only Analytics Agent. The agent is reached
+Phase 10 is complete with a separate, read-only Analytics Agent. The agent is reached
 through `reckon_copilot.api.analytics.run` and the `Analytics` mode in the
 Copilot conversation. Intent routing selects only one of three registered
 tools: current-page summary, grouped breakdown or time trend. User text is
@@ -98,12 +106,13 @@ package initializer, so bench migration can import
 
 The human-readable response formatter remains part of the Copilot shell and
 keeps provider briefings usable for non-technical users. Controlled writes,
-invoice/document import and large-file migration remain later phases because
-they require separate approval, dependency and rollback boundaries.
+The invoice/document import boundaries are delivered in Phases 13 through 19;
+large-file migration remains an optional future product phase because it needs
+separate cleansing, dependency and rollback design.
 
 ## Phase 11 read-only forecasting and anomaly agent
 
-Phase 11 has started with a separate deterministic Forecasting Agent. It is
+Phase 11 is complete with a separate deterministic Forecasting Agent. It is
 available through `reckon_copilot.api.forecasting.run` and the `Forecast` and
 `Anomalies` modes in the Copilot conversation. The service authorizes the
 canonical context with the dedicated read-only `forecasting.run` capability
@@ -132,26 +141,23 @@ dedicated `forecasting.run` capability.
 
 ## Phase 12 controlled write actions
 
-Phase 12 has started with the controlled action path for create, update, delete,
+Phase 12 is complete with a controlled action path for create, update, delete,
 submit and approve operations. The path is separate from normal Copilot,
-Analytics and Forecasting requests. A Form action must first pass the native
-permission boundary, produce a deterministic plan hash and show a preview. A
-second explicit approval issues a short-lived user/site/plan-scoped token; a
-final execution click is still required before mutation.
+Analytics and Forecasting requests. A Form action first passes the native
+permission boundary, produces a deterministic plan hash and shows a preview.
+The signed-in user then clicks one `Approve` button; the server rechecks native
+Frappe access and applies the transaction immediately.
 
-The executor revalidates native permissions immediately before the write,
-rejects protected or unknown fields, records a `Copilot Action Audit` record,
-prevents duplicate execution of a completed plan and rolls back the current
-transaction on mutation failure. Approval now rechecks the target permission,
-stores native server-side approval state in `Copilot Action Audit`, and uses an
-opaque short-lived browser token whose hash is stored in that audit row. No
-site-level encryption key or extra deployment secret is required. Preview and
-approval failures return panel-safe messages rather than Frappe error modals.
-No action is triggered by an ordinary question, and no action runs automatically
-from catalog refresh, feedback learning or the read-only Phase 11 agents.
-Create and update previews without explicit field values stop at a clear next
-step and cannot be approved; submit and approve previews remain the simple
-no-value approval path.
+The executor rejects protected or unknown fields, records the confirming user
+and result in `Copilot Action Audit`, prevents duplicate execution of a
+completed plan and rolls back the current transaction on mutation failure. No
+separate Administrator approval, site encryption key, extra deployment secret,
+browser approval token or final Execute step is required for these actions.
+Preview and confirmation failures return panel-safe messages rather than Frappe
+error modals. No action is triggered by an ordinary question, catalog refresh,
+feedback learning or the read-only agents. Create and update previews without
+explicit field values stop at a clear next step; submit and approve previews
+remain the simple no-value confirmation path.
 
 ## Phase 9 Suggested Actions Catalog alignment
 
@@ -451,7 +457,7 @@ Copilot permission boundary.
 
 ## Phase 13 document import boundary
 
-Phase 13 adds a read-only document import preflight. The Copilot attachment
+Phase 13 is complete. It adds a read-only document import preflight. The Copilot attachment
 control accepts CSV, TSV, JSON and text documents, then sends bounded base64
 content to `reckon_copilot.api.imports.preview_document`.
 
@@ -470,7 +476,7 @@ but must still add a separate approval and execution boundary.
 
 ## Phase 14 document import mapping boundary
 
-Phase 14 prepares a deterministic dry-run import plan from the bounded preview.
+Phase 14 is complete. It prepares a deterministic dry-run import plan from the bounded preview.
 The server reparses the attachment, validates the target DocType through native
 Frappe create permission, maps source headers to field names or labels, checks
 required fields and common field types, and returns only compact sample rows,
@@ -485,7 +491,7 @@ revalidate the exact file hash, target DocType, user and plan hash.
 
 ## Phase 15 approval-gated document import boundary
 
-Phase 15 adds the final guarded import path. A clean dry-run plan can be
+Phase 15 is complete. It adds the final guarded import path. A clean dry-run plan can be
 confirmed by the current user after native DocType create permission checks.
 Approval is stored in the native `Copilot Action Audit` DocType with a hashed,
 short-lived token scoped to the exact plan hash, user and site.
@@ -504,7 +510,7 @@ migration until a later migration phase.
 
 ## Phase 16 safe document text extraction
 
-Phase 16 adds a read-only parser boundary for text-based PDF and DOCX uploads.
+Phase 16 is complete. It adds a read-only parser boundary for text-based PDF and DOCX uploads.
 The parser uses only the standard library, applies bounded stream/archive/XML
 limits, ignores embedded files and macros, and returns a compact text excerpt.
 It does not perform OCR, follow external links, read arbitrary archive parts,
@@ -522,7 +528,7 @@ OCR is deliberately designed and permissioned.
 
 ## Phase 17 deterministic document field extraction
 
-Phase 17 enriches PDF/DOCX previews with a review-only field extraction pass.
+Phase 17 is complete. It enriches PDF/DOCX previews with a review-only field extraction pass.
 It matches explicit labels such as `Invoice Number`, `Invoice Date`, `Customer`,
 `Due Date`, `Tax` and `Grand Total` in the bounded text excerpt. A candidate is
 returned only when it matches an installed target field, or as a canonical
@@ -536,7 +542,7 @@ approval token or ERP write in this phase.
 
 ## Phase 18 reviewed extraction plan boundary
 
-Phase 18 lets a user correct extracted PDF/DOCX values in the panel and submit
+Phase 18 is complete. It lets a user correct extracted PDF/DOCX values in the panel and submit
 them to the same required-field, type and mapping validation used by structured
 imports. The server re-reads the upload, re-extracts the bounded text preview,
 accepts only fields from the target DocType schema, and returns a stable
@@ -548,7 +554,7 @@ it does not create, update, submit, approve or delete ERP documents.
 
 ## Phase 19 Codex-style self-confirmed document creation
 
-Phase 19 adds the next step for a reviewed PDF/DOCX import without introducing
+Phase 19 is complete. It adds the next step for a reviewed PDF/DOCX import without introducing
 an administrator approval workflow. The panel shows the target DocType, mapped
 values, row count and validation state, then opens a confirmation dialog. The
 current signed-in user explicitly chooses `Approve and create`; canceling leaves
@@ -562,3 +568,16 @@ idempotency, but it is not an administrator approval queue. No System Manager
 role is required solely for Copilot confirmation; native DocType/document
 permissions remain authoritative. Any changed file, fields or reviewed values
 forces a new preview and confirmation.
+
+## Post-plan release milestone
+
+Phases 0 through 19 are complete for the current product plan. The next
+milestone is release hardening: deploy the latest commits to staging, migrate
+the site, restart workers, clear Desk assets, run the documented verification
+matrix with Administrator and restricted users, review audit and usage logs,
+and complete business-user acceptance for the supported contexts. Production
+release should follow only after those checks and a backup/rollback rehearsal.
+
+Future work is optional and should be opened as a new phase only when a
+business requirement is agreed, such as persistent alert dismissal, OCR or
+large-file migration. None is required to finish the current planned scope.
