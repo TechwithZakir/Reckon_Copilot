@@ -192,7 +192,7 @@ class PermissionBoundaryTests(unittest.TestCase):
                 capability=CAPABILITY_CALL_PROVIDER,
             )
 
-    def test_write_capability_requires_system_manager(self):
+    def test_write_capability_does_not_require_admin_role(self):
         boundary = CopilotPermissionBoundary(
             StaticPermissionAdapter(
                 roles={"Employee"},
@@ -200,11 +200,11 @@ class PermissionBoundaryTests(unittest.TestCase):
             )
         )
 
-        with self.assertRaises(PermissionDenied):
-            boundary.authorize(
-                {"page_type": "List", "doctype": "Item"},
-                capability=CAPABILITY_WRITE_ACTION,
-            )
+        authorized = boundary.authorize(
+            {"page_type": "List", "doctype": "Item"},
+            capability=CAPABILITY_WRITE_ACTION,
+        )
+        self.assertTrue(authorized.decision.allowed)
 
     def test_import_preview_requires_native_create_permission(self):
         boundary = CopilotPermissionBoundary(

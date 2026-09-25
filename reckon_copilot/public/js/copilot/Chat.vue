@@ -248,9 +248,20 @@ async function prepareExtractedImportPlan(message) {
   }
 }
 
-async function approveImportPlan(message) {
-  if (!message?.importPlan || message.importApproving || message.importApproved) return;
+function openImportConfirmation(message) {
+  if (!message?.importPlan?.ready_for_approval || message.importApproving || message.importExecuting) return;
+  message.importConfirmOpen = true;
+}
+
+function closeImportConfirmation(message) {
+  if (message) message.importConfirmOpen = false;
+}
+
+async function confirmImportPlan(message) {
+  if (!message?.importPlan || message.importApproving || message.importExecuting) return;
+  message.importConfirmOpen = false;
   message.importApproving = true;
+  message.importExecuting = true;
   message.importPlanError = "";
   try {
     const response = await approveDocumentImportPlan(message.importPlan);
@@ -259,34 +270,23 @@ async function approveImportPlan(message) {
     }
     message.importApprovalToken = response.approval_token;
     message.importApproved = true;
-  } catch (error) {
-    message.importPlanError = error?.message || "Approval could not be recorded.";
-  } finally {
-    message.importApproving = false;
-  }
-}
-
-async function executeImport(message) {
-  if (!message?.importPlan || !message.importApprovalToken || !message.sourceAttachment || message.importExecuting) return;
-  message.importExecuting = true;
-  message.importPlanError = "";
-  try {
     const attachment = message.sourceAttachment;
-    const response = await executeDocumentImport(
+    const result = await executeDocumentImport(
       message.importPlan,
       message.importApprovalToken,
       attachment.name,
       attachment.base64,
       attachment.type,
     );
-    if (!response?.ok) throw new Error(response?.message || "Import could not be completed.");
-    message.importResult = response.result_name || `Imported ${response.created_count || 0} record(s).`;
+    if (!result?.ok) throw new Error(result?.message || "Import could not be completed.");
+    message.importResult = result.result_name || `Created ${result.created_count || 0} record${result.created_count === 1 ? "" : "s"}.`;
     message.importApprovalToken = "";
     message.importApproved = false;
     message.sourceAttachment = null;
   } catch (error) {
-    message.importPlanError = error?.message || "Import could not be completed.";
+    message.importPlanError = error?.message || "The document was not created.";
   } finally {
+    message.importApproving = false;
     message.importExecuting = false;
   }
 }
@@ -699,7 +699,7 @@ onBeforeUnmount(() => {
             <dl class="rc-import-plan-stats">
               <div><dt>Errors</dt><dd>{{ message.importPlan.error_count }}</dd></div>
               <div><dt>Unmapped</dt><dd>{{ message.importPlan.unmapped_fields?.length || 0 }}</dd></div>
-              <div><dt>Approval</dt><dd>{{ message.importPlan.ready_for_approval ? "Ready later" : "Needs review" }}</dd></div>
+              <div><dt>Confirmation</dt><dd>{{ message.importPlan.ready_for_approval ? "Ready to create" : "Needs review" }}</dd></div>
             </dl>
             <ul v-if="message.importPlan.errors?.length" class="rc-message-notes rc-import-plan-errors">
               <li v-for="error in message.importPlan.errors" :key="error.row">
@@ -709,29 +709,44 @@ onBeforeUnmount(() => {
             <ul v-if="message.importPlan.warnings?.length" class="rc-message-notes">
               <li v-for="warning in message.importPlan.warnings" :key="warning">{{ warning }}</li>
             </ul>
-            <small v-if="message.importPlan.execution === 'review_only'" class="rc-analytics-source">Review plan only · PDF/DOCX approval and execution are not available yet.</small>
-            <small v-else class="rc-analytics-source">Dry run validated · Approval is required before any ERP document is created.</small>
+            <small v-if="message.importPlan.execution === 'review_only'" class="rc-analytics-source">Review only · no ERP document can be created from this plan.</small>
+            <small v-else class="rc-analytics-source">Preview validated · nothing is created until you confirm below.</small>
             <div v-if="message.importPlan.ready_for_approval" class="rc-import-plan-actions">
               <button
-                v-if="!message.importApproved"
-                class="rc-import-plan-button"
-                type="button"
-                :disabled="message.importApproving"
-                @click="approveImportPlan(message)"
-              >
-                {{ message.importApproving ? "Requesting approval..." : "Approve import" }}
-              </button>
-              <button
-                v-else
                 class="rc-import-plan-button is-primary"
                 type="button"
-                :disabled="message.importExecuting"
-                @click="executeImport(message)"
+                :disabled="message.importApproving || message.importExecuting"
+                @click="openImportConfirmation(message)"
               >
-                {{ message.importExecuting ? "Importing..." : "Execute approved import" }}
+                Create after confirmation
               </button>
             </div>
             <p v-if="message.importResult" class="rc-import-result">{{ message.importResult }}</p>
+            <div v-if="message.importConfirmOpen" class="rc-import-confirm" role="dialog" aria-modal="true" aria-labelledby="rc-import-confirm-title">
+              <div class="rc-import-confirm-card">
+                <div class="rc-import-preview-heading">
+                  <strong id="rc-import-confirm-title">Confirm document creation</strong>
+                  <button class="rc-icon-button" type="button" aria-label="Close confirmation" @click="closeImportConfirmation(message)">×</button>
+                </div>
+                <p>
+                  Copilot is ready to create {{ message.importPlan.row_count }} record{{ message.importPlan.row_count === 1 ? "" : "s" }} in
+                  <strong>{{ message.importPlan.target_doctype }}</strong> from <strong>{{ message.importPlan.source_file_name }}</strong>.
+                </p>
+                <dl class="rc-import-confirm-values">
+                  <template v-for="mapping in message.importPlan.mappings" :key="mapping.target">
+                    <dt>{{ mapping.target }}</dt>
+                    <dd>{{ message.importPlan.reviewed_record?.[mapping.target] ?? message.importPlan.sample_rows?.[0]?.values?.[mapping.target] ?? "Blank" }}</dd>
+                  </template>
+                </dl>
+                <small class="rc-analytics-source">Review these values carefully. Cancel leaves ERP data unchanged.</small>
+                <div class="rc-import-plan-actions">
+                  <button class="rc-secondary-button" type="button" @click="closeImportConfirmation(message)">Cancel</button>
+                  <button class="rc-primary-button" type="button" :disabled="message.importApproving || message.importExecuting" @click="confirmImportPlan(message)">
+                    {{ message.importApproving || message.importExecuting ? "Creating..." : "Approve and create" }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">

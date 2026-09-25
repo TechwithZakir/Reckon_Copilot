@@ -137,13 +137,13 @@ def build_extracted_import_plan(
     plan["extraction_method"] = str(preview.get("extraction_method") or "deterministic_label_match")
     plan["extraction_status"] = "review_only"
     plan["reviewed_record"] = record
-    plan["ready_for_approval"] = False
-    plan["execution"] = "review_only"
+    plan["ready_for_approval"] = not plan.get("errors") and bool(record) and bool(plan.get("mappings"))
+    plan["execution"] = "confirmation_required"
     plan["warnings"] = [
         *plan.get("warnings", []),
-        "PDF/DOCX extracted values are review-only; approval and execution are not available yet.",
+        "Review the values, then explicitly confirm before creating the ERP document.",
     ][:MAX_WARNINGS]
-    plan["plan_hash"] = stable_hash(canonical_json(plan))
+    plan["plan_hash"] = stable_hash(canonical_json({key: value for key, value in plan.items() if key != "plan_hash"}))
     return plan
 
 

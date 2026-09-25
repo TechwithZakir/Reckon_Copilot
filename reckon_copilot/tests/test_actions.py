@@ -59,7 +59,24 @@ class ActionPlannerTests(unittest.TestCase):
         )
         self.assertTrue(result["plan"]["high_risk"])
 
-    def test_non_manager_cannot_plan_write_action(self):
+    def test_user_with_native_permission_can_plan_write_action(self):
+        result = plan_action(
+            {"page_type": "Form", "doctype": "Sales Order", "document_name": "SO-0001"},
+            "update",
+            values={"customer": "Crystal Traders"},
+            user="Employee",
+            permission_adapter=StaticPermissionAdapter(
+                user="Employee",
+                roles={"Employee"},
+                document_permissions={
+                    ("Sales Order", "SO-0001", "read"): True,
+                    ("Sales Order", "SO-0001", "write"): True,
+                },
+            ),
+        )
+        self.assertTrue(result["plan"]["requires_confirmation"])
+
+    def test_user_without_native_permission_cannot_plan_write_action(self):
         with self.assertRaises(PermissionDenied):
             plan_action(
                 {"page_type": "List", "doctype": "Sales Order"},

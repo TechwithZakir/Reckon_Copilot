@@ -7,7 +7,13 @@ from typing import Any
 from reckon_copilot.actions.approval import issue_approval_token
 from reckon_copilot.actions.executor import FrappeActionAuditStore
 from reckon_copilot.imports.mapping import build_extracted_import_plan, build_import_plan
-from reckon_copilot.imports.executor import ImportExecutionError, execute_import_plan, record_import_approval
+from reckon_copilot.imports.executor import (
+    ImportExecutionError,
+    execute_extracted_import_plan,
+    execute_import_plan,
+    record_extracted_import_approval,
+    record_import_approval,
+)
 from reckon_copilot.imports.extraction import build_field_extraction_preview, sanitize_extracted_record
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
 from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionDenied, authorize_context
@@ -161,7 +167,9 @@ def approve_document_import_plan(plan: Any = None) -> dict[str, Any]:
         payload = json.loads(plan) if isinstance(plan, str) else plan
         if not isinstance(payload, dict) or not payload.get("plan_hash"):
             return _safe_error("A valid import plan is required.")
-        if payload.get("version") != "v1" or payload.get("execution") != "preview_only" or not payload.get("ready_for_approval"):
+        is_standard = payload.get("version") == "v1" and payload.get("execution") == "preview_only"
+        is_extracted = payload.get("version") == "v1-extracted-review" and payload.get("execution") == "confirmation_required"
+        if (not is_standard and not is_extracted) or not payload.get("ready_for_approval"):
             return _safe_error("This plan is review-only and cannot be approved or executed yet.")
         target = str(payload.get("target_doctype") or "").strip()
         source_id = str(payload.get("source_preview_id") or "").strip()
@@ -180,7 +188,8 @@ def approve_document_import_plan(plan: Any = None) -> dict[str, Any]:
             user=frappe.session.user,
             site=getattr(frappe.local, "site", "default"),
         )
-        record_import_approval(
+        approval_recorder = record_extracted_import_approval if is_extracted else record_import_approval
+        approval_recorder(
             payload,
             token,
             user=frappe.session.user,
@@ -210,6 +219,17 @@ def execute_document_import(
 
         payload = json.loads(plan) if isinstance(plan, str) else plan
         raw = base64.b64decode(str(content or ""), validate=True)
+        if isinstance(payload, dict) and payload.get("version") == "v1-extracted-review":
+            return execute_extracted_import_plan(
+                payload,
+                str(approval_token or ""),
+                file_name=file_name,
+                content=raw,
+                mime_type=mime_type,
+                frappe_module=frappe,
+                user=frappe.session.user,
+                site=getattr(frappe.local, "site", "default"),
+            )
         return execute_import_plan(
             payload,
             str(approval_token or ""),

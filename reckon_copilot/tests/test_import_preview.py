@@ -121,7 +121,7 @@ class ImportPreviewTests(unittest.TestCase):
         self.assertEqual(extraction["extracted_fields"], [])
         self.assertTrue(any("selected DocType" in warning for warning in extraction["extraction_warnings"]))
 
-    def test_extracted_review_plan_validates_values_but_cannot_be_approved(self):
+    def test_extracted_review_plan_validates_values_for_explicit_approval(self):
         plan = build_extracted_import_plan(
             {
                 "structured": False,
@@ -140,8 +140,11 @@ class ImportPreviewTests(unittest.TestCase):
         )
 
         self.assertEqual(plan["version"], "v1-extracted-review")
-        self.assertEqual(plan["execution"], "review_only")
-        self.assertFalse(plan["ready_for_approval"])
+        self.assertTrue(plan["ready_for_approval"])
+        self.assertTrue(plan["requires_approval"])
+        self.assertTrue(plan["write_required"])
+        self.assertFalse(plan["model_training"])
+        self.assertEqual(plan["execution"], "confirmation_required")
         self.assertEqual(plan["row_count"], 1)
         self.assertEqual(plan["error_count"], 0)
         self.assertEqual(len(plan["plan_hash"]), 64)

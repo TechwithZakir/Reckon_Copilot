@@ -485,7 +485,7 @@ revalidate the exact file hash, target DocType, user and plan hash.
 ## Phase 15 approval-gated document import boundary
 
 Phase 15 adds the final guarded import path. A clean dry-run plan can be
-approved only after native System Manager and DocType create permission checks.
+confirmed by the current user after native DocType create permission checks.
 Approval is stored in the native `Copilot Action Audit` DocType with a hashed,
 short-lived token scoped to the exact plan hash, user and site.
 
@@ -495,10 +495,11 @@ permission, and inserts only the validated rows. Repeat execution of a
 completed plan is idempotent. Failed imports roll back the Frappe transaction
 and record the failure in the audit record.
 
-The UI must show separate `Approve import` and `Execute approved import`
-controls. Approval alone never writes data. Every import plan remains bounded
-to 100 rows, does not train a model, and does not support PDF/DOCX structured
-mapping or child-table migration until a later migration phase.
+The UI must show the dry-run plan and ask the current user to explicitly
+confirm before creating anything. Canceling or closing the confirmation never
+writes data. Every import plan remains bounded to 100 rows, does not train a
+model, and does not support PDF/DOCX structured mapping or child-table
+migration until a later migration phase.
 
 ## Phase 16 safe document text extraction
 
@@ -540,8 +541,23 @@ imports. The server re-reads the upload, re-extracts the bounded text preview,
 accepts only fields from the target DocType schema, and returns a stable
 review-only plan hash.
 
-These plans use `version: v1-extracted-review`, `execution: review_only` and
-`ready_for_approval: false`. They cannot receive an approval token or reach the
-import executor. No ERP document is created, updated, submitted, approved or
-deleted. A later migration phase must define re-extraction of the reviewed
-values before PDF/DOCX writes can be considered.
+These plans use `version: v1-extracted-review` and keep the reviewed values
+separate from the original text preview. Phase 18 itself remains preview-only;
+it does not create, update, submit, approve or delete ERP documents.
+
+## Phase 19 Codex-style self-confirmed document creation
+
+Phase 19 adds the next step for a reviewed PDF/DOCX import without introducing
+an administrator approval workflow. The panel shows the target DocType, mapped
+values, row count and validation state, then opens a confirmation dialog. The
+current signed-in user explicitly chooses `Approve and create`; canceling leaves
+ERP data unchanged. The word approval here means this visible user
+confirmation, similar to Codex asking before a tool creates something.
+
+The server still revalidates the exact attachment, plan hash, installed target
+fields and the current user's native Frappe create permission immediately before
+the insert. The audit record records the confirming user and result for
+idempotency, but it is not an administrator approval queue. No System Manager
+role is required solely for Copilot confirmation; native DocType/document
+permissions remain authoritative. Any changed file, fields or reviewed values
+forces a new preview and confirmation.

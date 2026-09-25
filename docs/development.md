@@ -140,24 +140,23 @@ rollback procedure are available.
 
 ## Phase 12 Verification
 
-Phase 12 is the approval-gated write path. On staging, open an existing Form
-as a System Manager and select a write-preview suggestion. Confirm that the
+Phase 12 is the confirmation-gated write path. On staging, open an existing
+Form as a user with native Frappe permission and select a write-preview
+suggestion. Confirm that the
 panel shows the target DocType, record, action, risk and plan hash. Confirm that
 closing the dialog or cancelling does not change the record.
 
-Approve the plan and verify that the UI changes to `ready_to_execute`; approval
-alone must not mutate data. Approval should create an `approved` record in
-`Copilot Action Audit`; no site encryption-key configuration is required.
-Select `Execute approved action` only after checking the preview, then confirm
-the expected native Frappe result and a completed audit record. Repeat the same
-execution request and confirm it returns an idempotent result without applying
-the change twice.
+Confirm the plan and verify that no data changes until the final confirmation
+click. The audit record should retain the confirming user and the final result;
+no site encryption-key configuration is required. Confirm the expected native
+Frappe result and a completed audit record. Repeat the same execution request
+and confirm it returns an idempotent result without applying the change twice.
 
 Test an unauthorized user, a changed plan, an expired token, an unknown field,
 and a protected field. Each must remain inside the Copilot panel with a useful
 message and must not show a Frappe server-error modal. Test submit/delete/approve
 as high-risk operations and verify that each still requires the same explicit
-approval plus final execution click. Do not use production records until backup,
+preview and user confirmation. Do not use production records until backup,
 rollback and audit review procedures are approved.
 
 For create or update suggestions with no explicit field values, verify that the
@@ -271,18 +270,18 @@ is created.
 
 ## Phase 15 Verification
 
-Phase 15 adds approval-gated document import. On staging, use a small CSV or
-JSON file and prepare a clean plan on a DocType where the account has create
-permission. Confirm that `Approve import` is separate from `Execute approved
-import`, and that approval alone does not create any ERP record.
+Phase 15 adds confirmation-gated document import. On staging, use a small CSV
+or JSON file and prepare a clean plan on a DocType where the current account
+has create permission. Confirm that the panel shows the mapped values and a
+single confirmation step; canceling must not create an ERP record.
 
-As a System Manager, approve the plan and execute it. Confirm the created count
-and names are shown, `Copilot Action Audit` contains an approved then completed
-import record, and repeating the same execution is idempotent. Change one byte
-in the attachment, change the target plan, use an expired token, or retry as a
-user without native create permission; each must be rejected before insertion
-and remain inside Copilot without a Frappe error modal. Confirm a failed
-multi-row insert rolls back and is marked failed in the audit record. No PDF,
+Confirm the plan and verify the created count and names are shown,
+`Copilot Action Audit` contains the confirming user and completed import
+record, and repeating the same execution is idempotent. Change one byte in the
+attachment, change the target plan, use an expired token, or retry as a user
+without native create permission; each must be rejected before insertion and
+remain inside Copilot without a Frappe error modal. Confirm a failed multi-row
+insert rolls back and is marked failed in the audit record. No PDF,
 DOCX structured mapping, child-table migration or model-training behavior is
 included.
 
@@ -342,9 +341,14 @@ node scripts/validate_vue.mjs
 
 On a permitted invoice Form, attach a labeled PDF/DOCX and edit one extracted
 value in the panel. Select `Prepare review plan` and confirm the plan shows
-the corrected value, required-field/type errors and `review_only` behavior.
-Confirm there is no `Approve import` button. Call the approval endpoint with
-the returned plan and confirm it is refused as review-only. Try adding a field
-not present on the target DocType; confirm the server rejects it without a
-Frappe error modal. Confirm no ERP record, approval token or model-training
-record is created.
+the corrected value and required-field/type errors. A valid plan should show
+`Create after confirmation`; click it and verify the confirmation dialog lists
+the target DocType and mapped values. Cancel and confirm no ERP record is
+created. Reopen the dialog and choose `Approve and create`; confirm exactly one
+record is created and the panel shows the result. Repeat the final request and
+confirm it is idempotent. The current user needs normal native Frappe create
+permission; no separate Administrator approval is requested. Change the
+attachment or edit a value after planning and confirm the server asks for a
+new preview instead of creating from stale data. Try adding a field not
+present on the target DocType; confirm the server rejects it without a Frappe
+error modal and no model-training record is created.

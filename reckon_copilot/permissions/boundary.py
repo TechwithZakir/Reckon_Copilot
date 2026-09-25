@@ -403,9 +403,9 @@ class CopilotPermissionBoundary:
 
     def _assert_capability(self, capability: str, user: str) -> None:
         if capability == CAPABILITY_WRITE_ACTION:
-            roles = self.adapter.user_roles(user)
-            if "System Manager" not in roles:
-                raise PermissionDenied("Write actions require System Manager")
+            # User confirmation is the Copilot approval step. Native Frappe
+            # DocType/document permissions remain the enforcement boundary in
+            # authorize_action immediately after this capability check.
             return
         if capability not in READ_ONLY_CAPABILITIES:
             raise PermissionDenied(f"Unsupported Copilot capability: {capability}")

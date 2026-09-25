@@ -8,7 +8,8 @@ from typing import Any
 from reckon_copilot.actions.approval import hash_approval_token, validate_approval_token
 from reckon_copilot.actions.executor import AuditStore, FrappeActionAuditStore
 from reckon_copilot.context.builders import canonical_json
-from reckon_copilot.imports.mapping import build_import_plan
+from reckon_copilot.imports.extraction import build_field_extraction_preview
+from reckon_copilot.imports.mapping import build_extracted_import_plan, build_import_plan
 from reckon_copilot.imports.preview import build_document_preview
 from reckon_copilot.knowledge.models import stable_hash
 from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionAdapter
@@ -42,6 +43,35 @@ def record_import_approval(
     return audit_store.approve(
         {
             "plan_hash": plan_hash,
+            "action": "import",
+            "target_doctype": normalized["target_doctype"],
+            "target_name": normalized["source_preview_id"],
+            "user": user,
+            "site": site,
+            "approval_token_hash": hash_approval_token(approval_token),
+            "approval_expires_at": int(payload["expires_at"]),
+            "approved_by": user,
+            "plan_payload": json.dumps(normalized, sort_keys=True, ensure_ascii=True),
+        }
+    )
+
+
+def record_extracted_import_approval(
+    plan: dict[str, Any],
+    approval_token: str,
+    *,
+    user: str,
+    site: str,
+    audit_store: AuditStore,
+) -> str:
+    normalized = _validate_extracted_import_plan(plan)
+    payload = validate_approval_token(approval_token, plan_hash=normalized["plan_hash"], user=user, site=site)
+    existing = audit_store.find(normalized["plan_hash"], user, site)
+    if existing and existing.get("status") == "completed":
+        raise ImportExecutionError("This import has already been completed.")
+    return audit_store.approve(
+        {
+            "plan_hash": normalized["plan_hash"],
             "action": "import",
             "target_doctype": normalized["target_doctype"],
             "target_name": normalized["source_preview_id"],
@@ -142,6 +172,94 @@ def execute_import_plan(
         raise ImportExecutionError("Import failed; no changes were committed.") from error
 
 
+def execute_extracted_import_plan(
+    plan: dict[str, Any],
+    approval_token: str,
+    *,
+    file_name: str,
+    content: bytes,
+    mime_type: str,
+    frappe_module: Any,
+    user: str,
+    site: str,
+    permission_adapter: PermissionAdapter | None = None,
+    audit_store: AuditStore | None = None,
+) -> dict[str, Any]:
+    """Revalidate a reviewed PDF/DOCX plan, then execute it once after approval."""
+    normalized = _validate_extracted_import_plan(plan)
+    plan_hash = normalized["plan_hash"]
+    store = audit_store or FrappeActionAuditStore(frappe_module)
+    existing = store.find(plan_hash, user, site)
+    if not existing or existing.get("status") not in {"approved", "started", "completed"}:
+        raise ImportExecutionError("Confirm this document import before creating it.")
+    validate_approval_token(approval_token, plan_hash=plan_hash, user=user, site=site)
+    if not hmac.compare_digest(hash_approval_token(approval_token), str(existing.get("approval_token_hash") or "")):
+        raise ImportExecutionError("This approval token is not valid for the selected document import.")
+    if int(existing.get("approval_expires_at") or 0) < int(time.time()):
+        raise ImportExecutionError("Approval expired. Prepare the document import again.")
+
+    permission_context = {
+        "page_type": "Form",
+        "doctype": normalized["target_doctype"],
+        "document_name": f"new-import-{normalized['source_preview_id'][:16]}",
+    }
+    boundary = CopilotPermissionBoundary(permission_adapter or FrappePermissionAdapter(frappe_module))
+    boundary.authorize_action(permission_context, "create", user=user)
+
+    if existing.get("status") == "completed":
+        return {
+            "ok": True,
+            "execution": "completed",
+            "idempotent": True,
+            "audit_id": existing.get("name"),
+            "result_name": existing.get("result_name") or None,
+        }
+    if existing.get("status") == "started":
+        raise ImportExecutionError("This approved document import is already in progress.")
+
+    audit_id = store.start(
+        {
+            "plan_hash": plan_hash,
+            "action": "import",
+            "target_doctype": normalized["target_doctype"],
+            "target_name": normalized["source_preview_id"],
+            "user": user,
+            "site": site,
+            "plan_payload": json.dumps(normalized, sort_keys=True, ensure_ascii=True),
+        }
+    )
+    try:
+        preview = build_document_preview(file_name, content, mime_type=mime_type)
+        if preview.get("format") != normalized["source_format"] or preview.get("preview_id") != normalized["source_preview_id"]:
+            raise ImportExecutionError("The attachment changed; prepare the document import again.")
+        preview.update(build_field_extraction_preview(preview))
+        rebuilt = build_extracted_import_plan(
+            preview,
+            normalized["target_doctype"],
+            _target_schema(frappe_module, normalized["target_doctype"]),
+            normalized["reviewed_record"],
+        )
+        if rebuilt["plan_hash"] != plan_hash or not rebuilt["ready_for_approval"]:
+            raise ImportExecutionError("The attachment, target fields or reviewed values changed; prepare the document import again.")
+        names = _insert_rows(frappe_module, normalized["target_doctype"], rebuilt, [normalized["reviewed_record"]])
+        result_name = _result_summary(names)
+        store.complete(audit_id, result_name)
+        return {
+            "ok": True,
+            "execution": "completed",
+            "idempotent": False,
+            "audit_id": audit_id,
+            "result_name": result_name,
+            "created_count": len(names),
+        }
+    except Exception as error:
+        _rollback(frappe_module)
+        store.fail(audit_id, str(error))
+        if isinstance(error, ImportExecutionError):
+            raise
+        raise ImportExecutionError("Document import failed; no changes were committed.") from error
+
+
 def _validate_import_plan(plan: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(plan, dict) or plan.get("version") != "v1":
         raise ImportExecutionError("A valid import plan is required.")
@@ -161,6 +279,29 @@ def _validate_import_plan(plan: dict[str, Any]) -> dict[str, Any]:
     expected = stable_hash(canonical_json({key: value for key, value in plan.items() if key != "plan_hash"}))
     if expected != plan_hash:
         raise ImportExecutionError("The approved import plan changed and must be reviewed again.")
+    return dict(plan)
+
+
+def _validate_extracted_import_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(plan, dict) or plan.get("version") != "v1-extracted-review":
+        raise ImportExecutionError("A valid reviewed document import plan is required.")
+    if not plan.get("ready_for_approval") or plan.get("execution") != "confirmation_required":
+        raise ImportExecutionError("Resolve the reviewed document validation errors before confirmation.")
+    if plan.get("model_training") or plan.get("source_format") not in {"pdf", "docx"}:
+        raise ImportExecutionError("The reviewed document import format is not guarded.")
+    if not isinstance(plan.get("mappings"), list) or not plan["mappings"]:
+        raise ImportExecutionError("The reviewed document import has no field mappings.")
+    if int(plan.get("row_count") or 0) != 1 or not isinstance(plan.get("reviewed_record"), dict):
+        raise ImportExecutionError("The reviewed document import must contain one bounded record.")
+    target = str(plan.get("target_doctype") or "").strip()
+    source_id = str(plan.get("source_preview_id") or "").strip()
+    source_format = str(plan.get("source_format") or "").strip()
+    plan_hash = str(plan.get("plan_hash") or "").strip()
+    if not target or not source_id or source_format not in {"pdf", "docx"} or len(plan_hash) != 64:
+        raise ImportExecutionError("The reviewed document import plan is incomplete.")
+    expected = stable_hash(canonical_json({key: value for key, value in plan.items() if key != "plan_hash"}))
+    if expected != plan_hash:
+        raise ImportExecutionError("The reviewed document import plan changed and must be reviewed again.")
     return dict(plan)
 
 
