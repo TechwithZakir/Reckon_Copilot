@@ -42,11 +42,19 @@ The frontend API boundary now exposes preview requests for the upcoming approval
 
 The Copilot panel now renders a preview approval dialog for Form contexts, including target, execution mode, risk and plan hash. Approving closes the preview only; it does not execute an ERPNext write.
 
-Phase 9 now issues short-lived HMAC approval tokens scoped to the exact plan hash, user and site. The approval endpoint records approval intent but returns `execution: disabled`; no token can execute a write until a separately audited executor is implemented.
+Phase 9 initially issued short-lived approval tokens scoped to the exact plan
+hash, user and site. The current controlled-write path stores the token hash in
+the native `Copilot Action Audit` record, so no site-level signing secret is
+required.
 
 ## Phase 9 completion
 
-Phase 9 is complete. It delivers the contextual Agent Advisor, server-validated multi-model selection, preview-first action planning, permission-bound Form action previews, redacted plan values, deterministic plan hashes and short-lived signed approval tokens. The phase deliberately stops before ERPNext mutation: approved plans still return `execution: disabled`. Actual create, update, delete, submit and approve execution belongs to the next action-execution phase and must add native DocType permission checks, audit records, idempotency, transaction/error handling and rollback or compensation behavior.
+Phase 9 is complete. It delivered the contextual Agent Advisor,
+server-validated multi-model selection, preview-first action planning,
+permission-bound Form action previews, redacted plan values and deterministic
+plan hashes. Actual create, update, delete, submit and approve execution is
+implemented in the later controlled-write phase with native DocType permission
+checks, audit records, idempotency, transaction/error handling and rollback.
 
 The next phase is the separate read-only Analytics Agent. Controlled ERP
 actions remain a later phase and must not contaminate the lightweight Copilot
@@ -133,13 +141,16 @@ final execution click is still required before mutation.
 The executor revalidates native permissions immediately before the write,
 rejects protected or unknown fields, records a `Copilot Action Audit` record,
 prevents duplicate execution of a completed plan and rolls back the current
-transaction on mutation failure. Approval now rechecks the exact target before
-issuing a token, and preview/approval failures return panel-safe messages rather
-than Frappe error modals. No action is triggered by an ordinary question, and
-no action runs automatically from catalog refresh, feedback learning or the
-read-only Phase 11 agents. Create and update previews without explicit field
-values stop at a clear next step and cannot be approved; submit and approve
-previews remain the simple no-value approval path.
+transaction on mutation failure. Approval now rechecks the target permission,
+stores native server-side approval state in `Copilot Action Audit`, and uses an
+opaque short-lived browser token whose hash is stored in that audit row. No
+site-level encryption key or extra deployment secret is required. Preview and
+approval failures return panel-safe messages rather than Frappe error modals.
+No action is triggered by an ordinary question, and no action runs automatically
+from catalog refresh, feedback learning or the read-only Phase 11 agents.
+Create and update previews without explicit field values stop at a clear next
+step and cannot be approved; submit and approve previews remain the simple
+no-value approval path.
 
 ## Phase 9 Suggested Actions Catalog alignment
 

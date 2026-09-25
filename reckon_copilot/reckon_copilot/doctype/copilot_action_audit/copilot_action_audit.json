@@ -4,7 +4,7 @@
   "creation": "2026-09-24 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
-  "field_order": ["plan_hash", "action", "target_doctype", "target_name", "user", "site", "status", "plan_payload", "result_name", "error"],
+  "field_order": ["plan_hash", "action", "target_doctype", "target_name", "user", "site", "status", "approval_token_hash", "approval_expires_at", "approved_by", "approved_at", "plan_payload", "result_name", "error"],
   "fields": [
     {"fieldname": "plan_hash", "fieldtype": "Data", "label": "Plan Hash", "unique": 1},
     {"fieldname": "action", "fieldtype": "Data", "label": "Action"},
@@ -12,7 +12,11 @@
     {"fieldname": "target_name", "fieldtype": "Data", "label": "Target Name"},
     {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User"},
     {"fieldname": "site", "fieldtype": "Data", "label": "Site"},
-    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "started\ncompleted\nfailed"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "approved\nstarted\ncompleted\nfailed"},
+    {"fieldname": "approval_token_hash", "fieldtype": "Data", "label": "Approval Token Hash", "hidden": 1},
+    {"fieldname": "approval_expires_at", "fieldtype": "Int", "label": "Approval Expires At", "hidden": 1},
+    {"fieldname": "approved_by", "fieldtype": "Link", "label": "Approved By", "options": "User"},
+    {"fieldname": "approved_at", "fieldtype": "Datetime", "label": "Approved At"},
     {"fieldname": "plan_payload", "fieldtype": "Long Text", "label": "Plan Payload"},
     {"fieldname": "result_name", "fieldtype": "Data", "label": "Result Name"},
     {"fieldname": "error", "fieldtype": "Small Text", "label": "Error"}

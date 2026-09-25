@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import hmac
+import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from reckon_copilot.actions.approval import validate_approval_token
+from reckon_copilot.actions.approval import hash_approval_token, validate_approval_token
 from reckon_copilot.context.builders import canonical_json
 from reckon_copilot.knowledge.models import stable_hash
 from reckon_copilot.permissions.boundary import (
@@ -40,6 +42,9 @@ class AuditStore(Protocol):
     def start(self, record: dict[str, Any]) -> str:
         ...
 
+    def approve(self, record: dict[str, Any]) -> str:
+        ...
+
     def complete(self, audit_id: str, result_name: str | None) -> None:
         ...
 
@@ -65,7 +70,14 @@ class InMemoryAuditStore:
 
     def start(self, record: dict[str, Any]) -> str:
         audit_id = str(record["plan_hash"])
-        self.records[audit_id] = {**record, "status": "started"}
+        existing = self.records.get(audit_id, {})
+        self.records[audit_id] = {**existing, **record, "name": existing.get("name", audit_id), "status": "started"}
+        return audit_id
+
+    def approve(self, record: dict[str, Any]) -> str:
+        audit_id = str(record["plan_hash"])
+        existing = self.records.get(audit_id, {})
+        self.records[audit_id] = {**existing, **record, "name": existing.get("name", audit_id), "status": "approved"}
         return audit_id
 
     def complete(self, audit_id: str, result_name: str | None) -> None:
@@ -87,13 +99,22 @@ class FrappeActionAuditStore:
         rows = self.frappe.get_all(
             self.doctype,
             filters={"plan_hash": plan_hash, "user": user, "site": site},
-            fields=["name", "status", "result_name"],
+            fields=["name", "status", "result_name", "approval_token_hash", "approval_expires_at"],
             order_by="creation desc",
             limit_page_length=1,
         )
         return rows[0] if rows else None
 
     def start(self, record: dict[str, Any]) -> str:
+        existing = self.find(str(record["plan_hash"]), str(record["user"]), str(record["site"]))
+        if existing:
+            self.frappe.db.set_value(
+                self.doctype,
+                existing["name"],
+                {"status": "started", "plan_payload": record.get("plan_payload") or ""},
+                update_modified=False,
+            )
+            return str(existing["name"])
         doc = self.frappe.get_doc(
             {
                 "doctype": self.doctype,
@@ -101,6 +122,22 @@ class FrappeActionAuditStore:
                 "status": "started",
             }
         )
+        doc.insert(ignore_permissions=True)
+        return str(doc.name)
+
+    def approve(self, record: dict[str, Any]) -> str:
+        existing = self.find(str(record["plan_hash"]), str(record["user"]), str(record["site"]))
+        values = {
+            "status": "approved",
+            "approval_token_hash": record.get("approval_token_hash") or "",
+            "approval_expires_at": record.get("approval_expires_at"),
+            "approved_by": record.get("approved_by") or record.get("user") or "",
+            "plan_payload": record.get("plan_payload") or "",
+        }
+        if existing:
+            self.frappe.db.set_value(self.doctype, existing["name"], values, update_modified=False)
+            return str(existing["name"])
+        doc = self.frappe.get_doc({"doctype": self.doctype, **record, **values})
         doc.insert(ignore_permissions=True)
         return str(doc.name)
 
@@ -128,7 +165,6 @@ def execute_approved_plan(
     frappe_module: Any,
     user: str,
     site: str,
-    secret: str,
     permission_adapter: PermissionAdapter | None = None,
     audit_store: AuditStore | None = None,
 ) -> dict[str, Any]:
@@ -143,18 +179,25 @@ def execute_approved_plan(
     if expected_hash != plan_hash:
         raise ActionExecutionError("The approved plan changed and must be reviewed again.")
 
-    validate_approval_token(
-        approval_token,
-        plan_hash=plan_hash,
-        user=user,
-        site=site,
-        secret=secret,
-    )
     if normalized.get("user") and normalized["user"] != user:
         raise ActionExecutionError("The approved plan belongs to a different user.")
 
     target = normalized["target"]
     action = normalized["action"]
+    store = audit_store or FrappeActionAuditStore(frappe_module)
+    existing = store.find(plan_hash, user, site)
+    if not existing or existing.get("status") not in {"approved", "completed"}:
+        raise ActionExecutionError("Approve this action before executing it.")
+    validate_approval_token(
+        approval_token,
+        plan_hash=plan_hash,
+        user=user,
+        site=site,
+    )
+    if not hmac.compare_digest(hash_approval_token(approval_token), str(existing.get("approval_token_hash") or "")):
+        raise ActionExecutionError("This approval token is not valid for the selected action.")
+    if int(existing.get("approval_expires_at") or 0) < int(time.time()):
+        raise ActionExecutionError("Approval expired. Prepare the action again.")
     permission_context = {
         "page_type": "Form",
         "doctype": target["doctype"],
@@ -163,8 +206,6 @@ def execute_approved_plan(
     boundary = CopilotPermissionBoundary(permission_adapter or FrappePermissionAdapter(frappe_module))
     boundary.authorize_action(permission_context, action, user=user)
 
-    store = audit_store or FrappeActionAuditStore(frappe_module)
-    existing = store.find(plan_hash, user, site)
     if existing and existing.get("status") == "completed":
         return {
             "ok": True,
@@ -203,6 +244,40 @@ def execute_approved_plan(
         if isinstance(error, ActionExecutionError):
             raise
         raise ActionExecutionError("Action failed; no changes were committed.") from error
+
+
+def record_approval(
+    plan: dict[str, Any],
+    approval_token: str,
+    *,
+    user: str,
+    site: str,
+    audit_store: AuditStore,
+) -> str:
+    """Persist native server-side approval state for one unchanged plan."""
+    normalized = _validate_plan(plan)
+    plan_hash = normalized["plan_hash"]
+    expected_hash = stable_hash(canonical_json({key: value for key, value in normalized.items() if key != "plan_hash"}))
+    if expected_hash != plan_hash:
+        raise ActionExecutionError("The action plan changed and must be reviewed again.")
+    payload = validate_approval_token(approval_token, plan_hash=plan_hash, user=user, site=site)
+    existing = audit_store.find(plan_hash, user, site)
+    if existing and existing.get("status") == "completed":
+        raise ActionExecutionError("This action has already been completed.")
+    return audit_store.approve(
+        {
+            "plan_hash": plan_hash,
+            "action": normalized["action"],
+            "target_doctype": normalized["target"]["doctype"],
+            "target_name": normalized["target"].get("document_name") or "",
+            "user": user,
+            "site": site,
+            "approval_token_hash": hash_approval_token(approval_token),
+            "approval_expires_at": int(payload["expires_at"]),
+            "approved_by": user,
+            "plan_payload": json.dumps(normalized, sort_keys=True, ensure_ascii=True),
+        }
+    )
 
 
 def _validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
