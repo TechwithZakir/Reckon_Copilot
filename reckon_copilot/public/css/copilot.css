@@ -1473,6 +1473,18 @@
   opacity: 0.65;
 }
 
+.rc-import-plan-button.is-primary {
+  border-color: #2f80ff;
+  background: #2f80ff;
+  color: #fff;
+}
+
+.rc-import-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .rc-import-plan-error {
   margin: 0;
   color: #b42318;
@@ -1515,6 +1527,11 @@
 
 .rc-import-plan-errors {
   color: #8d2b1e;
+}
+
+.rc-import-result {
+  color: #137d3c;
+  font-weight: 800;
 }
 
 @media (max-width: 640px) {

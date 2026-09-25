@@ -261,9 +261,25 @@ node scripts/validate_vue.mjs
 After a successful document preview, select `Prepare import plan`. On a target
 DocType where the user has native create permission, confirm that the panel
 shows mapped fields, row count, validation errors, unmapped fields and a stable
-plan hash. A clean plan may say `Ready later`, but no approve or execute button
-is available in this phase. Verify invalid numbers, dates, select values and
+plan hash. A clean plan may say `Ready later`; approval and execution remain
+separate guarded controls. Verify invalid numbers, dates, select values and
 missing required fields remain visible as row-level errors. Repeat without
 create permission and confirm the plan is refused inside Copilot without a
 Frappe error modal. Confirm no ERP record changes and no model-training record
 is created.
+
+## Phase 15 Verification
+
+Phase 15 adds approval-gated document import. On staging, use a small CSV or
+JSON file and prepare a clean plan on a DocType where the account has create
+permission. Confirm that `Approve import` is separate from `Execute approved
+import`, and that approval alone does not create any ERP record.
+
+As a System Manager, approve the plan and execute it. Confirm the created count
+and names are shown, `Copilot Action Audit` contains an approved then completed
+import record, and repeating the same execution is idempotent. Change one byte
+in the attachment, change the target plan, use an expired token, or retry as a
+user without native create permission; each must be rejected before insertion
+and remain inside Copilot without a Frappe error modal. Confirm a failed
+multi-row insert rolls back and is marked failed in the audit record. No PDF,
+DOCX, child-table migration or model-training behavior is included.

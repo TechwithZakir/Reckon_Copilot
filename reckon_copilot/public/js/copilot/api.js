@@ -141,6 +141,20 @@ export function prepareDocumentImportPlan(fileName, content, mimeType, context, 
   });
 }
 
+export function approveDocumentImportPlan(plan) {
+  return call("reckon_copilot.api.imports.approve_document_import_plan", { plan });
+}
+
+export function executeDocumentImport(plan, approvalToken, fileName, content, mimeType) {
+  return call("reckon_copilot.api.imports.execute_document_import", {
+    plan,
+    approval_token: approvalToken,
+    file_name: fileName,
+    content,
+    mime_type: mimeType,
+  });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }

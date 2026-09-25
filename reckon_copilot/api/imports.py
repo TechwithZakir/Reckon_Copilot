@@ -4,7 +4,10 @@ import base64
 import json
 from typing import Any
 
+from reckon_copilot.actions.approval import issue_approval_token
+from reckon_copilot.actions.executor import FrappeActionAuditStore
 from reckon_copilot.imports.mapping import build_import_plan
+from reckon_copilot.imports.executor import ImportExecutionError, execute_import_plan, record_import_approval
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
 from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionDenied, authorize_context
 
@@ -98,6 +101,80 @@ def prepare_document_import_plan(
         return _safe_error(str(error))
     except Exception:
         return _safe_error("The import plan could not be prepared. No ERP data was changed.")
+
+
+@_whitelist(allow_guest=False)
+def approve_document_import_plan(plan: Any = None) -> dict[str, Any]:
+    """Approve one unchanged import plan without executing it."""
+    try:
+        import frappe  # type: ignore
+
+        payload = json.loads(plan) if isinstance(plan, str) else plan
+        if not isinstance(payload, dict) or not payload.get("plan_hash"):
+            return _safe_error("A valid import plan is required.")
+        target = str(payload.get("target_doctype") or "").strip()
+        source_id = str(payload.get("source_preview_id") or "").strip()
+        permission_context = {
+            "page_type": "Form",
+            "doctype": target,
+            "document_name": f"new-import-{source_id[:16]}",
+        }
+        CopilotPermissionBoundary(FrappePermissionAdapter(frappe)).authorize_action(
+            permission_context,
+            "create",
+            user=frappe.session.user,
+        )
+        token = issue_approval_token(
+            payload,
+            user=frappe.session.user,
+            site=getattr(frappe.local, "site", "default"),
+        )
+        record_import_approval(
+            payload,
+            token,
+            user=frappe.session.user,
+            site=getattr(frappe.local, "site", "default"),
+            audit_store=FrappeActionAuditStore(frappe),
+        )
+        return {"ok": True, "approved": True, "execution": "ready_to_execute", "approval_token": token}
+    except PermissionDenied as error:
+        return _safe_error(str(error), access_denied=True)
+    except (ImportExecutionError, TypeError, ValueError) as error:
+        return _safe_error(str(error))
+    except Exception:
+        return _safe_error("Approval could not be recorded. No ERP data was changed.")
+
+
+@_whitelist(allow_guest=False)
+def execute_document_import(
+    plan: Any = None,
+    approval_token: str = "",
+    file_name: str = "",
+    content: str = "",
+    mime_type: str = "",
+) -> dict[str, Any]:
+    """Execute an approved import after re-reading and revalidating the file."""
+    try:
+        import frappe  # type: ignore
+
+        payload = json.loads(plan) if isinstance(plan, str) else plan
+        raw = base64.b64decode(str(content or ""), validate=True)
+        return execute_import_plan(
+            payload,
+            str(approval_token or ""),
+            file_name=file_name,
+            content=raw,
+            mime_type=mime_type,
+            frappe_module=frappe,
+            user=frappe.session.user,
+            site=getattr(frappe.local, "site", "default"),
+        )
+    except PermissionDenied as error:
+        return _safe_error(str(error), access_denied=True)
+    except (ImportExecutionError, ImportPreviewError, TypeError, ValueError) as error:
+        return _safe_error(str(error))
+    except Exception:
+        return _safe_error("Import could not be completed. No changes were committed.")
 
 
 def _target_fields(frappe: Any, doctype: str) -> set[str]:

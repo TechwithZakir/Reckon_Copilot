@@ -1,7 +1,15 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
-import { askCopilotStream, prepareDocumentImportPlan, previewDocumentImport, runAnalytics, runForecasting } from "./api";
+import {
+  askCopilotStream,
+  approveDocumentImportPlan,
+  executeDocumentImport,
+  prepareDocumentImportPlan,
+  previewDocumentImport,
+  runAnalytics,
+  runForecasting,
+} from "./api";
 import { formatAnswer } from "./answer_format.mjs";
 import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse, normalizeForecastingResponse } from "./chat_logic.mjs";
 
@@ -193,12 +201,54 @@ async function prepareImportPlan(message) {
     );
     if (!response?.ok) throw new Error(response?.message || "The import plan could not be prepared.");
     message.importPlan = response.plan || null;
-    message.sourceAttachment = null;
   } catch (error) {
     message.importPlanError = error?.message || "The import plan could not be prepared.";
   } finally {
     message.importingPlan = false;
     nextTick(scrollConversationToEnd);
+  }
+}
+
+async function approveImportPlan(message) {
+  if (!message?.importPlan || message.importApproving || message.importApproved) return;
+  message.importApproving = true;
+  message.importPlanError = "";
+  try {
+    const response = await approveDocumentImportPlan(message.importPlan);
+    if (!response?.ok || !response.approval_token) {
+      throw new Error(response?.message || "Approval could not be recorded.");
+    }
+    message.importApprovalToken = response.approval_token;
+    message.importApproved = true;
+  } catch (error) {
+    message.importPlanError = error?.message || "Approval could not be recorded.";
+  } finally {
+    message.importApproving = false;
+  }
+}
+
+async function executeImport(message) {
+  if (!message?.importPlan || !message.importApprovalToken || !message.sourceAttachment || message.importExecuting) return;
+  message.importExecuting = true;
+  message.importPlanError = "";
+  try {
+    const attachment = message.sourceAttachment;
+    const response = await executeDocumentImport(
+      message.importPlan,
+      message.importApprovalToken,
+      attachment.name,
+      attachment.base64,
+      attachment.type,
+    );
+    if (!response?.ok) throw new Error(response?.message || "Import could not be completed.");
+    message.importResult = response.result_name || `Imported ${response.created_count || 0} record(s).`;
+    message.importApprovalToken = "";
+    message.importApproved = false;
+    message.sourceAttachment = null;
+  } catch (error) {
+    message.importPlanError = error?.message || "Import could not be completed.";
+  } finally {
+    message.importExecuting = false;
   }
 }
 
@@ -564,7 +614,7 @@ onBeforeUnmount(() => {
           </ul>
           <small class="rc-analytics-source">Preview only · No ERP document was created or changed.</small>
           <button
-            v-if="message.sourceAttachment && (message.importPreview.target_doctype || routeContext?.doctype || message.importPreview.suggestedDoctypes?.length)"
+            v-if="message.sourceAttachment && !message.importPlan && (message.importPreview.target_doctype || routeContext?.doctype || message.importPreview.suggestedDoctypes?.length)"
             class="rc-import-plan-button"
             type="button"
             :disabled="message.importingPlan"
@@ -595,7 +645,28 @@ onBeforeUnmount(() => {
             <ul v-if="message.importPlan.warnings?.length" class="rc-message-notes">
               <li v-for="warning in message.importPlan.warnings" :key="warning">{{ warning }}</li>
             </ul>
-            <small class="rc-analytics-source">Dry run only · Approval and final import are not available in this phase.</small>
+            <small class="rc-analytics-source">Dry run validated · Approval is required before any ERP document is created.</small>
+            <div v-if="message.importPlan.ready_for_approval" class="rc-import-plan-actions">
+              <button
+                v-if="!message.importApproved"
+                class="rc-import-plan-button"
+                type="button"
+                :disabled="message.importApproving"
+                @click="approveImportPlan(message)"
+              >
+                {{ message.importApproving ? "Requesting approval..." : "Approve import" }}
+              </button>
+              <button
+                v-else
+                class="rc-import-plan-button is-primary"
+                type="button"
+                :disabled="message.importExecuting"
+                @click="executeImport(message)"
+              >
+                {{ message.importExecuting ? "Importing..." : "Execute approved import" }}
+              </button>
+            </div>
+            <p v-if="message.importResult" class="rc-import-result">{{ message.importResult }}</p>
           </div>
         </div>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">

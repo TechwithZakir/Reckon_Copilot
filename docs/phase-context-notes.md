@@ -479,5 +479,23 @@ The plan must include a stable `plan_hash`, `write_required: true`,
 `requires_approval: true`, `execution: "preview_only"` and
 `model_training: false`. A plan with validation errors is not ready for
 approval. This phase never inserts, updates, submits, approves or deletes ERP
-documents; approval and final import remain a later phase and must revalidate
-the exact file hash, target DocType, user and plan hash.
+documents; approval and final import are implemented in Phase 15 and must
+revalidate the exact file hash, target DocType, user and plan hash.
+
+## Phase 15 approval-gated document import boundary
+
+Phase 15 adds the final guarded import path. A clean dry-run plan can be
+approved only after native System Manager and DocType create permission checks.
+Approval is stored in the native `Copilot Action Audit` DocType with a hashed,
+short-lived token scoped to the exact plan hash, user and site.
+
+Execution re-reads the attachment, recomputes its preview and mapping plan,
+rejects any changed file, schema, mapping or target, rechecks native create
+permission, and inserts only the validated rows. Repeat execution of a
+completed plan is idempotent. Failed imports roll back the Frappe transaction
+and record the failure in the audit record.
+
+The UI must show separate `Approve import` and `Execute approved import`
+controls. Approval alone never writes data. Every import plan remains bounded
+to 100 rows, does not train a model, and does not support PDF/DOCX extraction
+or child-table migration until a later parser/migration phase.
