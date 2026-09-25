@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
-import { askCopilotStream, runAnalytics, runForecasting } from "./api";
+import { askCopilotStream, previewDocumentImport, runAnalytics, runForecasting } from "./api";
 import { formatAnswer } from "./answer_format.mjs";
 import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse, normalizeForecastingResponse } from "./chat_logic.mjs";
 
@@ -16,6 +16,9 @@ const emit = defineEmits(["update:selectedModel", "update:agentMode"]);
 const draft = ref(props.initialPrompt);
 const messages = ref([]);
 const isSending = ref(false);
+const fileInput = ref(null);
+const selectedFile = ref(null);
+const uploadError = ref("");
 const progressTimers = new Set();
 const typingTimers = new Set();
 
@@ -39,6 +42,12 @@ const forecastingStages = [
   "Calculating bounded result",
   "Preparing readable results",
 ];
+const importStages = [
+  "Reading attachment",
+  "Checking page permissions",
+  "Inspecting document",
+  "Preparing preview",
+];
 
 watch(() => props.initialPrompt, (value) => {
   draft.value = value;
@@ -46,15 +55,35 @@ watch(() => props.initialPrompt, (value) => {
 
 async function send() {
   const question = draft.value.trim();
-  if (!canAsk(question, props.routeContext) || isSending.value) return;
-  messages.value.push({ role: "user", text: question, tone: "normal" });
-  const assistantMessage = createProgressMessage();
+  const attachment = selectedFile.value;
+  if ((!canAsk(question, props.routeContext) && !attachment) || isSending.value) return;
+  const userText = question || `Preview ${attachment.name}`;
+  messages.value.push({
+    role: "user",
+    text: userText,
+    tone: "normal",
+    attachmentName: attachment?.name || "",
+  });
+  const assistantMessage = createProgressMessage(attachment ? "import" : props.agentMode);
   messages.value.push(assistantMessage);
   startProgress(assistantMessage);
   const requestId = createRequestId();
   draft.value = "";
+  selectedFile.value = null;
+  uploadError.value = "";
   isSending.value = true;
   try {
+    if (attachment) {
+      const response = await previewDocumentImport(
+        attachment.name,
+        attachment.base64,
+        attachment.type,
+        props.routeContext,
+        props.routeContext?.doctype || "",
+      );
+      completeImportPreview(assistantMessage, response);
+      return;
+    }
     const isForecasting = ["forecasting", "anomalies"].includes(props.agentMode);
     const response = props.agentMode === "analytics"
       ? await runAnalytics(question, props.routeContext)
@@ -90,9 +119,10 @@ async function send() {
   }
 }
 
-function createProgressMessage() {
-  const analytics = props.agentMode === "analytics";
-  const forecasting = ["forecasting", "anomalies"].includes(props.agentMode);
+function createProgressMessage(mode = props.agentMode) {
+  const importing = mode === "import";
+  const analytics = mode === "analytics";
+  const forecasting = ["forecasting", "anomalies"].includes(mode);
   return {
     role: "assistant",
     tone: "normal",
@@ -100,17 +130,45 @@ function createProgressMessage() {
     progress: {
       active: true,
       stageIndex: 0,
-      stages: analytics ? analyticsStages : forecasting ? forecastingStages : progressStages,
+      stages: importing ? importStages : analytics ? analyticsStages : forecasting ? forecastingStages : progressStages,
       startedAt: Date.now(),
       elapsed: "0s",
       percent: 8,
     },
     meta: {
-      provider: analytics ? "Analytics Agent" : forecasting ? "Forecasting Agent" : "LLM provider",
-      stream: !analytics && !forecasting,
+      provider: importing ? "Document preview" : analytics ? "Analytics Agent" : forecasting ? "Forecasting Agent" : "LLM provider",
+      stream: !importing && !analytics && !forecasting,
     },
     streamDone: false,
   };
+}
+
+function completeImportPreview(message, response) {
+  if (!response?.ok) {
+    throw new Error(response?.message || "The document preview could not be prepared.");
+  }
+  const preview = response.preview || {};
+  const recordCount = Number(preview.record_count || 0);
+  const fields = Array.isArray(preview.fields) ? preview.fields : [];
+  const rows = (Array.isArray(preview.records) ? preview.records : []).slice(0, 3).map((record) => ({
+    cells: Object.entries(record || {}).slice(0, 8).map(([label, value]) => ({ label, value })),
+  }));
+  message.importPreview = {
+    ...preview,
+    fields,
+    rows,
+    suggestedDoctypes: Array.isArray(preview.suggested_doctypes) ? preview.suggested_doctypes : [],
+    warnings: Array.isArray(preview.warnings) ? preview.warnings : [],
+  };
+  const summary = recordCount
+    ? `Preview ready: ${recordCount} record${recordCount === 1 ? "" : "s"} found in ${preview.file_name || "the attachment"}.`
+    : "No records were found in the attachment. The preview is still read-only.";
+  finishProgress(message, {
+    role: "assistant",
+    tone: "normal",
+    text: summary,
+    meta: { provider: "Document preview", source: "Import preflight" },
+  }, { reveal: false });
 }
 
 function startProgress(message) {
@@ -233,6 +291,50 @@ function scrollConversationToEnd() {
 
 function clearConversation() {
   messages.value = [];
+  selectedFile.value = null;
+  uploadError.value = "";
+}
+
+function openFilePicker() {
+  if (!props.routeContext || props.routeContext.access_denied || isSending.value) return;
+  fileInput.value?.click();
+}
+
+function clearAttachment() {
+  selectedFile.value = null;
+  uploadError.value = "";
+}
+
+function handleFileSelected(event) {
+  const file = event.target?.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) {
+    selectedFile.value = null;
+    uploadError.value = "Choose a document smaller than 4 MB for a safe preview.";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result || "");
+    const separator = dataUrl.indexOf(",");
+    if (separator < 0) {
+      uploadError.value = "The selected document could not be read.";
+      return;
+    }
+    selectedFile.value = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      base64: dataUrl.slice(separator + 1),
+    };
+    uploadError.value = "";
+  };
+  reader.onerror = () => {
+    selectedFile.value = null;
+    uploadError.value = "The selected document could not be read.";
+  };
+  reader.readAsDataURL(file);
 }
 
 function cancelConversation() {
@@ -407,6 +509,30 @@ onBeforeUnmount(() => {
           </div>
           <small class="rc-analytics-source">Read-only deterministic result · {{ message.forecasting.tool_label }}</small>
         </div>
+        <div v-if="message.importPreview" class="rc-import-preview">
+          <div class="rc-import-preview-heading">
+            <strong>Document preview</strong>
+            <span>{{ message.importPreview.format?.toUpperCase() }}</span>
+          </div>
+          <p>
+            {{ message.importPreview.file_name }} · {{ message.importPreview.record_count }} record{{ message.importPreview.record_count === 1 ? "" : "s" }}
+          </p>
+          <div v-if="message.importPreview.fields?.length" class="rc-import-fields">
+            <span v-for="field in message.importPreview.fields" :key="field">{{ field }}</span>
+          </div>
+          <div v-for="(row, rowIndex) in message.importPreview.rows" :key="rowIndex" class="rc-import-row">
+            <span v-for="cell in row.cells" :key="`${rowIndex}-${cell.label}`">
+              <b>{{ cell.label }}:</b> {{ cell.value }}
+            </span>
+          </div>
+          <p v-if="message.importPreview.suggestedDoctypes?.length" class="rc-import-suggestion">
+            Possible DocType: {{ message.importPreview.suggestedDoctypes.join(", ") }}
+          </p>
+          <ul v-if="message.importPreview.warnings?.length" class="rc-message-notes">
+            <li v-for="warning in message.importPreview.warnings" :key="warning">{{ warning }}</li>
+          </ul>
+          <small class="rc-analytics-source">Preview only · No ERP document was created or changed.</small>
+        </div>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
           <div class="rc-progress-line">
             <span class="rc-progress-spinner" aria-hidden="true"></span>
@@ -468,8 +594,28 @@ onBeforeUnmount(() => {
         </div>
       </article>
     </div>
+    <input
+      ref="fileInput"
+      class="rc-sr-only"
+      type="file"
+      accept=".csv,.tsv,.json,.txt,.md,text/csv,application/json,text/plain"
+      @change="handleFileSelected"
+    />
+    <div v-if="selectedFile" class="rc-attachment-chip">
+      <span aria-hidden="true">&#128206;</span>
+      <strong>{{ selectedFile.name }}</strong>
+      <button type="button" aria-label="Remove attachment" @click="clearAttachment">&times;</button>
+    </div>
+    <p v-if="uploadError" class="rc-upload-error">{{ uploadError }}</p>
     <div class="rc-composer-box">
-      <button class="rc-attach-button" type="button" disabled aria-label="Attach context" title="Context is attached automatically">
+      <button
+        class="rc-attach-button"
+        type="button"
+        :disabled="!routeContext || routeContext.access_denied || isSending"
+        aria-label="Attach document for preview"
+        title="Attach a CSV, TSV, JSON, or text document for a read-only preview"
+        @click="openFilePicker"
+      >
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m21.4 11.6-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5" />
         </svg>

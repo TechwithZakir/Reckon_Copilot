@@ -1067,6 +1067,51 @@
   font-size: 10px;
 }
 
+.rc-attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border: 1px solid #d6e5fa;
+  border-radius: 8px;
+  background: #f6f9fe;
+  color: #31577f;
+  font-size: 10px;
+}
+
+.rc-attachment-chip strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-attachment-chip button {
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b85a3;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.rc-attachment-chip button:hover,
+.rc-attachment-chip button:focus-visible {
+  background: #e7f0fb;
+  color: #183b66;
+}
+
+.rc-upload-error {
+  margin: 7px 0 0;
+  color: #b42318;
+  font-size: 10px;
+}
+
 .rc-runtime {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, auto);
@@ -1334,6 +1379,76 @@
 .rc-analytics-source {
   color: #7890aa;
   font-size: 9px;
+}
+
+.rc-import-preview {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #dce8f6;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #31577f;
+  font-size: 10px;
+}
+
+.rc-import-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #183b66;
+  font-size: 11px;
+}
+
+.rc-import-preview-heading span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #eaf2ff;
+  color: #315f9a;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.rc-import-preview p {
+  margin: 0;
+}
+
+.rc-import-fields,
+.rc-import-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.rc-import-fields span {
+  padding: 3px 6px;
+  border: 1px solid #d5e5f8;
+  border-radius: 999px;
+  background: #fff;
+  color: #527192;
+}
+
+.rc-import-row {
+  gap: 7px 10px;
+  padding-top: 6px;
+  border-top: 1px solid #e6eef8;
+  line-height: 1.35;
+}
+
+.rc-import-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rc-import-row b {
+  color: #183b66;
+}
+
+.rc-import-suggestion {
+  color: #315f9a;
+  font-weight: 700;
 }
 
 @media (max-width: 640px) {

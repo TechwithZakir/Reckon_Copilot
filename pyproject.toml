@@ -29,6 +29,7 @@ packages = [
   "reckon_copilot.context",
   "reckon_copilot.insights",
   "reckon_copilot.jobs",
+  "reckon_copilot.imports",
   "reckon_copilot.knowledge",
   "reckon_copilot.notifications",
   "reckon_copilot.patches",

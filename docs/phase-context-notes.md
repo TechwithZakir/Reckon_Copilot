@@ -447,3 +447,22 @@ DocType route remains a `List` route when that DocType exists, including tree
 DocTypes such as Customer Group and Item Group. This prevents false `DocType
 ... not found` errors and keeps invalid or restricted contexts inside the
 Copilot permission boundary.
+
+## Phase 13 document import boundary
+
+Phase 13 adds a read-only document import preflight. The Copilot attachment
+control accepts CSV, TSV, JSON and text documents, then sends bounded base64
+content to `reckon_copilot.api.imports.preview_document`.
+
+The preview service must:
+
+- authorize the current page context through the existing Frappe permission boundary
+- enforce the 4 MB upload and 100-record preview limits
+- return compact fields, sample values, unknown-field warnings and filename-based DocType hints
+- return `write_required: false`, `requires_approval: true` and `model_training: false`
+- never create, update, submit, approve or delete an ERP document
+- keep unsupported PDF/DOCX extraction explicit until a document parser is added
+
+The panel labels the result as a preview and states that no ERP document was
+created or changed. Future import or migration phases may reuse the validated
+preview, but must add a separate approval and execution boundary.

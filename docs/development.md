@@ -223,3 +223,25 @@ python -m compileall -q reckon_copilot
 node --test reckon_copilot/public/js/copilot/*.test.mjs
 node scripts/validate_vue.mjs
 ```
+
+## Phase 13 Verification
+
+Phase 13 adds a read-only attachment preview; it does not import or modify ERP
+data. Run the complete checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+.\.venv\Scripts\python.exe -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+On staging, open a permitted Form, List or Workspace and use the paperclip to
+preview a small CSV, TSV, JSON or text document. Confirm the conversation shows
+the filename, format, record count, compact fields, a few sample values and
+any unknown-field warnings. Confirm the result says that no ERP document was
+created or changed. Try an empty file, an unsupported PDF/DOCX file and a file
+larger than 4 MB; each should show a useful Copilot message without a Frappe
+error modal. Confirm the preview is permission-scoped and does not create an
+ERP record. PDF/DOCX extraction, field mapping, approval and final import are
+reserved for a later phase.

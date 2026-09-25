@@ -120,6 +120,16 @@ export function executeAction(plan, approvalToken) {
   });
 }
 
+export function previewDocumentImport(fileName, content, mimeType, context, targetDoctype = "") {
+  return call("reckon_copilot.api.imports.preview_document", {
+    file_name: fileName,
+    content,
+    mime_type: mimeType,
+    context,
+    target_doctype: targetDoctype,
+  });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }
