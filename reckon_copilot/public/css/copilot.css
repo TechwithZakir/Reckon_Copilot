@@ -1451,6 +1451,72 @@
   font-weight: 700;
 }
 
+.rc-import-plan-button {
+  justify-self: start;
+  padding: 6px 9px;
+  border: 1px solid #9fc4ff;
+  border-radius: 7px;
+  background: #fff;
+  color: #1c5fb8;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rc-import-plan-button:hover,
+.rc-import-plan-button:focus-visible {
+  background: #eef5ff;
+}
+
+.rc-import-plan-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.rc-import-plan-error {
+  margin: 0;
+  color: #b42318;
+}
+
+.rc-import-plan {
+  display: grid;
+  gap: 7px;
+  padding-top: 8px;
+  border-top: 1px solid #dce8f6;
+}
+
+.rc-import-plan p {
+  margin: 0;
+}
+
+.rc-import-plan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+}
+
+.rc-import-plan-stats div {
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.rc-import-plan-stats dt {
+  color: #7890aa;
+  font-size: 9px;
+}
+
+.rc-import-plan-stats dd {
+  margin: 2px 0 0;
+  color: #183b66;
+  font-weight: 800;
+}
+
+.rc-import-plan-errors {
+  color: #8d2b1e;
+}
+
 @media (max-width: 640px) {
   .rc-panel {
     top: 48px;

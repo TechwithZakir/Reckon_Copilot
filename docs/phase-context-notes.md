@@ -464,5 +464,20 @@ The preview service must:
 - keep unsupported PDF/DOCX extraction explicit until a document parser is added
 
 The panel labels the result as a preview and states that no ERP document was
-created or changed. Future import or migration phases may reuse the validated
-preview, but must add a separate approval and execution boundary.
+created or changed. Phase 14 may reuse the validated preview for field mapping,
+but must still add a separate approval and execution boundary.
+
+## Phase 14 document import mapping boundary
+
+Phase 14 prepares a deterministic dry-run import plan from the bounded preview.
+The server reparses the attachment, validates the target DocType through native
+Frappe create permission, maps source headers to field names or labels, checks
+required fields and common field types, and returns only compact sample rows,
+mapping decisions, warnings and errors.
+
+The plan must include a stable `plan_hash`, `write_required: true`,
+`requires_approval: true`, `execution: "preview_only"` and
+`model_training: false`. A plan with validation errors is not ready for
+approval. This phase never inserts, updates, submits, approves or deletes ERP
+documents; approval and final import remain a later phase and must revalidate
+the exact file hash, target DocType, user and plan hash.

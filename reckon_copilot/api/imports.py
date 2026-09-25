@@ -4,8 +4,9 @@ import base64
 import json
 from typing import Any
 
+from reckon_copilot.imports.mapping import build_import_plan
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
-from reckon_copilot.permissions.boundary import FrappePermissionAdapter, PermissionDenied, authorize_context
+from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionDenied, authorize_context
 
 
 def _whitelist(**kwargs: Any):
@@ -57,6 +58,48 @@ def preview_document(
         return _safe_error("The document preview could not be prepared. No ERP data was changed.")
 
 
+@_whitelist(allow_guest=False)
+def prepare_document_import_plan(
+    file_name: str = "",
+    content: str = "",
+    mime_type: str = "",
+    context: Any = None,
+    target_doctype: str = "",
+    field_map: Any = None,
+) -> dict[str, Any]:
+    """Prepare a validated dry-run plan without inserting ERP documents."""
+    try:
+        import frappe  # type: ignore
+
+        page_context = json.loads(context) if isinstance(context, str) else context
+        if not isinstance(page_context, dict):
+            return _safe_error("Open the target ERP page before preparing an import plan.")
+        target = str(target_doctype or "").strip()
+        adapter = FrappePermissionAdapter(frappe)
+        CopilotPermissionBoundary(adapter).authorize_import_preview(
+            page_context,
+            target,
+            user=frappe.session.user,
+        )
+        raw = base64.b64decode(str(content or ""), validate=True)
+        preview = build_document_preview(file_name, raw, mime_type=mime_type)
+        plan = build_import_plan(
+            preview,
+            target,
+            _target_schema(frappe, target),
+            field_map=_field_map(field_map),
+        )
+        return {"ok": True, "plan": plan}
+    except ImportPreviewError as error:
+        return _safe_error(str(error))
+    except PermissionDenied as error:
+        return _safe_error(str(error), access_denied=True)
+    except (ValueError, TypeError) as error:
+        return _safe_error(str(error))
+    except Exception:
+        return _safe_error("The import plan could not be prepared. No ERP data was changed.")
+
+
 def _target_fields(frappe: Any, doctype: str) -> set[str]:
     name = str(doctype or "").strip()
     if not name:
@@ -71,6 +114,34 @@ def _target_fields(frappe: Any, doctype: str) -> set[str]:
         if getattr(field, "fieldname", None)
         and str(getattr(field, "fieldtype", "")) not in {"Section Break", "Column Break", "Tab Break", "HTML"}
     }
+
+
+def _target_schema(frappe: Any, doctype: str) -> list[dict[str, Any]]:
+    try:
+        meta = frappe.get_meta(str(doctype or "").strip())
+    except Exception:
+        return []
+    fields = []
+    for field in getattr(meta, "fields", []) or []:
+        fields.append({
+            "fieldname": getattr(field, "fieldname", ""),
+            "label": getattr(field, "label", ""),
+            "fieldtype": getattr(field, "fieldtype", "Data"),
+            "reqd": bool(getattr(field, "reqd", False)),
+            "options": getattr(field, "options", ""),
+        })
+    return fields
+
+
+def _field_map(value: Any) -> dict[str, str]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+    if not isinstance(value, dict):
+        return {}
+    return {str(key)[:120]: str(item)[:120] for key, item in list(value.items())[:40]}
 
 
 def _suggested_doctypes(frappe: Any, file_name: str) -> list[str]:

@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 
-import { askCopilotStream, previewDocumentImport, runAnalytics, runForecasting } from "./api";
+import { askCopilotStream, prepareDocumentImportPlan, previewDocumentImport, runAnalytics, runForecasting } from "./api";
 import { formatAnswer } from "./answer_format.mjs";
 import { canAsk, normalizeAnalyticsResponse, normalizeAskResponse, normalizeForecastingResponse } from "./chat_logic.mjs";
 
@@ -81,7 +81,7 @@ async function send() {
         props.routeContext,
         props.routeContext?.doctype || "",
       );
-      completeImportPreview(assistantMessage, response);
+      completeImportPreview(assistantMessage, response, attachment);
       return;
     }
     const isForecasting = ["forecasting", "anomalies"].includes(props.agentMode);
@@ -143,7 +143,7 @@ function createProgressMessage(mode = props.agentMode) {
   };
 }
 
-function completeImportPreview(message, response) {
+function completeImportPreview(message, response, attachment) {
   if (!response?.ok) {
     throw new Error(response?.message || "The document preview could not be prepared.");
   }
@@ -160,6 +160,7 @@ function completeImportPreview(message, response) {
     suggestedDoctypes: Array.isArray(preview.suggested_doctypes) ? preview.suggested_doctypes : [],
     warnings: Array.isArray(preview.warnings) ? preview.warnings : [],
   };
+  message.sourceAttachment = attachment;
   const summary = recordCount
     ? `Preview ready: ${recordCount} record${recordCount === 1 ? "" : "s"} found in ${preview.file_name || "the attachment"}.`
     : "No records were found in the attachment. The preview is still read-only.";
@@ -169,6 +170,36 @@ function completeImportPreview(message, response) {
     text: summary,
     meta: { provider: "Document preview", source: "Import preflight" },
   }, { reveal: false });
+}
+
+async function prepareImportPlan(message) {
+  if (!message?.sourceAttachment || message.importingPlan) return;
+  const preview = message.importPreview || {};
+  const target = preview.target_doctype || props.routeContext?.doctype || preview.suggestedDoctypes?.[0] || "";
+  if (!target) {
+    message.importPlanError = "Open a target DocType page before preparing an import plan.";
+    return;
+  }
+  message.importingPlan = true;
+  message.importPlanError = "";
+  try {
+    const attachment = message.sourceAttachment;
+    const response = await prepareDocumentImportPlan(
+      attachment.name,
+      attachment.base64,
+      attachment.type,
+      props.routeContext,
+      target,
+    );
+    if (!response?.ok) throw new Error(response?.message || "The import plan could not be prepared.");
+    message.importPlan = response.plan || null;
+    message.sourceAttachment = null;
+  } catch (error) {
+    message.importPlanError = error?.message || "The import plan could not be prepared.";
+  } finally {
+    message.importingPlan = false;
+    nextTick(scrollConversationToEnd);
+  }
 }
 
 function startProgress(message) {
@@ -532,6 +563,40 @@ onBeforeUnmount(() => {
             <li v-for="warning in message.importPreview.warnings" :key="warning">{{ warning }}</li>
           </ul>
           <small class="rc-analytics-source">Preview only · No ERP document was created or changed.</small>
+          <button
+            v-if="message.sourceAttachment && (message.importPreview.target_doctype || routeContext?.doctype || message.importPreview.suggestedDoctypes?.length)"
+            class="rc-import-plan-button"
+            type="button"
+            :disabled="message.importingPlan"
+            @click="prepareImportPlan(message)"
+          >
+            {{ message.importingPlan ? "Preparing dry run..." : "Prepare import plan" }}
+          </button>
+          <p v-if="message.importPlanError" class="rc-import-plan-error">{{ message.importPlanError }}</p>
+          <div v-if="message.importPlan" class="rc-import-plan">
+            <div class="rc-import-preview-heading">
+              <strong>Dry-run import plan</strong>
+              <span>{{ message.importPlan.target_doctype }}</span>
+            </div>
+            <p>
+              {{ message.importPlan.row_count }} row{{ message.importPlan.row_count === 1 ? "" : "s" }} ·
+              {{ message.importPlan.mappings?.length || 0 }} mapped field{{ message.importPlan.mappings?.length === 1 ? "" : "s" }}
+            </p>
+            <dl class="rc-import-plan-stats">
+              <div><dt>Errors</dt><dd>{{ message.importPlan.error_count }}</dd></div>
+              <div><dt>Unmapped</dt><dd>{{ message.importPlan.unmapped_fields?.length || 0 }}</dd></div>
+              <div><dt>Approval</dt><dd>{{ message.importPlan.ready_for_approval ? "Ready later" : "Needs review" }}</dd></div>
+            </dl>
+            <ul v-if="message.importPlan.errors?.length" class="rc-message-notes rc-import-plan-errors">
+              <li v-for="error in message.importPlan.errors" :key="error.row">
+                Row {{ error.row }}: {{ error.messages.join("; ") }}
+              </li>
+            </ul>
+            <ul v-if="message.importPlan.warnings?.length" class="rc-message-notes">
+              <li v-for="warning in message.importPlan.warnings" :key="warning">{{ warning }}</li>
+            </ul>
+            <small class="rc-analytics-source">Dry run only · Approval and final import are not available in this phase.</small>
+          </div>
         </div>
         <div v-if="message.progress" class="rc-progress-card" :class="{ 'is-complete': !message.progress.active }">
           <div class="rc-progress-line">

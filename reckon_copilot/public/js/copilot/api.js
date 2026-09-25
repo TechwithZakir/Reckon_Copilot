@@ -130,6 +130,17 @@ export function previewDocumentImport(fileName, content, mimeType, context, targ
   });
 }
 
+export function prepareDocumentImportPlan(fileName, content, mimeType, context, targetDoctype, fieldMap = {}) {
+  return call("reckon_copilot.api.imports.prepare_document_import_plan", {
+    file_name: fileName,
+    content,
+    mime_type: mimeType,
+    context,
+    target_doctype: targetDoctype,
+    field_map: fieldMap,
+  });
+}
+
 export function savePreferences(preferences) {
   return call("reckon_copilot.api.preferences.update_preferences", preferences);
 }

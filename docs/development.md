@@ -243,5 +243,27 @@ any unknown-field warnings. Confirm the result says that no ERP document was
 created or changed. Try an empty file, an unsupported PDF/DOCX file and a file
 larger than 4 MB; each should show a useful Copilot message without a Frappe
 error modal. Confirm the preview is permission-scoped and does not create an
-ERP record. PDF/DOCX extraction, field mapping, approval and final import are
-reserved for a later phase.
+ERP record. PDF/DOCX extraction, approval and final import are reserved for a
+later phase.
+
+## Phase 14 Verification
+
+Phase 14 adds a dry-run import plan. It maps and validates data but does not
+approve or write anything. Run the complete checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+.\.venv\Scripts\python.exe -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+After a successful document preview, select `Prepare import plan`. On a target
+DocType where the user has native create permission, confirm that the panel
+shows mapped fields, row count, validation errors, unmapped fields and a stable
+plan hash. A clean plan may say `Ready later`, but no approve or execute button
+is available in this phase. Verify invalid numbers, dates, select values and
+missing required fields remain visible as row-level errors. Repeat without
+create permission and confirm the plan is refused inside Copilot without a
+Frappe error modal. Confirm no ERP record changes and no model-training record
+is created.

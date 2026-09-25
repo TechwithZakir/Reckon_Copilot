@@ -206,6 +206,36 @@ class PermissionBoundaryTests(unittest.TestCase):
                 capability=CAPABILITY_WRITE_ACTION,
             )
 
+    def test_import_preview_requires_native_create_permission(self):
+        boundary = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                doctype_permissions={
+                    ("Sales Order", "read"): True,
+                    ("Sales Order", "create"): True,
+                },
+            )
+        )
+
+        authorized = boundary.authorize_import_preview(
+            {"page_type": "List", "doctype": "Sales Order"},
+            "Sales Order",
+        )
+
+        self.assertTrue(authorized.decision.allowed)
+
+    def test_import_preview_blocks_without_native_create_permission(self):
+        boundary = CopilotPermissionBoundary(
+            StaticPermissionAdapter(
+                doctype_permissions={("Sales Order", "read"): True},
+            )
+        )
+
+        with self.assertRaises(PermissionDenied):
+            boundary.authorize_import_preview(
+                {"page_type": "List", "doctype": "Sales Order"},
+                "Sales Order",
+            )
+
     def test_guest_cannot_access_context(self):
         boundary = CopilotPermissionBoundary(
             StaticPermissionAdapter(

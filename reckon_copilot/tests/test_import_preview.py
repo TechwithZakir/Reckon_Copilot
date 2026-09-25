@@ -4,6 +4,7 @@ import json
 import unittest
 
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
+from reckon_copilot.imports.mapping import build_import_plan
 
 
 class ImportPreviewTests(unittest.TestCase):
@@ -42,6 +43,52 @@ class ImportPreviewTests(unittest.TestCase):
             build_document_preview("empty.txt", b"")
         with self.assertRaisesRegex(ImportPreviewError, "4 MB"):
             build_document_preview("large.txt", b"x" * (4 * 1024 * 1024 + 1))
+
+    def test_import_plan_maps_labels_and_stays_preview_only(self):
+        preview = build_document_preview(
+            "orders.json",
+            json.dumps([
+                {"Customer Name": "Crystal Traders", "qty": "2", "status": "Draft"},
+                {"Customer Name": "Northwind", "qty": "3", "status": "Draft"},
+            ]).encode(),
+        )
+        plan = build_import_plan(
+            preview,
+            "Sales Order",
+            [
+                {"fieldname": "customer_name", "label": "Customer Name", "fieldtype": "Data", "reqd": True},
+                {"fieldname": "qty", "label": "Quantity", "fieldtype": "Int", "reqd": True},
+                {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Draft\nSubmitted"},
+            ],
+        )
+
+        self.assertTrue(plan["ready_for_approval"])
+        self.assertTrue(plan["write_required"])
+        self.assertTrue(plan["requires_approval"])
+        self.assertFalse(plan["model_training"])
+        self.assertEqual(plan["row_count"], 2)
+        self.assertEqual(plan["error_count"], 0)
+        self.assertEqual(len(plan["plan_hash"]), 64)
+
+    def test_import_plan_reports_type_and_required_field_errors(self):
+        preview = build_document_preview(
+            "orders.csv",
+            b"customer_name,qty\nCrystal Traders,not-a-number\n",
+        )
+        plan = build_import_plan(
+            preview,
+            "Sales Order",
+            [
+                {"fieldname": "customer_name", "label": "Customer", "fieldtype": "Data", "reqd": True},
+                {"fieldname": "qty", "label": "Quantity", "fieldtype": "Int", "reqd": True},
+                {"fieldname": "company", "label": "Company", "fieldtype": "Data", "reqd": True},
+            ],
+        )
+
+        self.assertFalse(plan["ready_for_approval"])
+        self.assertGreater(plan["error_count"], 0)
+        self.assertTrue(any("whole number" in message for item in plan["errors"] for message in item["messages"]))
+        self.assertTrue(any("Missing required fields" in message for item in plan["errors"] for message in item["messages"]))
 
 
 if __name__ == "__main__":

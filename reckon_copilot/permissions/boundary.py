@@ -387,6 +387,20 @@ class CopilotPermissionBoundary:
             raise PermissionDenied(f"No permission to {action_name} requested document")
         return authorized
 
+    def authorize_import_preview(
+        self,
+        context: dict[str, Any],
+        target_doctype: str,
+        user: str | None = None,
+    ) -> AuthorizedContext:
+        """Authorize a dry-run import without granting write execution."""
+        authorized = self.authorize(context, capability=CAPABILITY_READ_CONTEXT, user=user)
+        user = user or self.adapter.session_user()
+        doctype = str(target_doctype or "").strip()
+        if not doctype or not self.adapter.has_doctype_permission(doctype, "create", user):
+            raise PermissionDenied("No permission to prepare an import for the selected DocType")
+        return authorized
+
     def _assert_capability(self, capability: str, user: str) -> None:
         if capability == CAPABILITY_WRITE_ACTION:
             roles = self.adapter.user_roles(user)
