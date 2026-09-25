@@ -517,3 +517,17 @@ extraction is never treated as model training.
 The parser rejects malformed, encrypted, oversized or text-free documents with
 a Copilot-safe message. Scanned PDFs therefore remain preview-ineligible until
 OCR is deliberately designed and permissioned.
+
+## Phase 17 deterministic document field extraction
+
+Phase 17 enriches PDF/DOCX previews with a review-only field extraction pass.
+It matches explicit labels such as `Invoice Number`, `Invoice Date`, `Customer`,
+`Due Date`, `Tax` and `Grand Total` in the bounded text excerpt. A candidate is
+returned only when it matches an installed target field, or as a canonical
+review field when no target DocType is open.
+
+Each candidate includes the target field, normalized value, confidence and the
+label that supplied the value. This is deterministic parsing, not an LLM
+decision and not automatic model training. The preview remains
+`structured: false`; extracted prose cannot be promoted into an import plan,
+approval token or ERP write in this phase.

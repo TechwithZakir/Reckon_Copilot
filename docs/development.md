@@ -305,3 +305,25 @@ structured import-plan button appears. Try a scanned/text-free PDF, malformed
 DOCX, encrypted DOCX and oversized archive; each must show a useful Copilot
 message without a Frappe error modal. Confirm no ERP record is created or
 changed and no model-training data is produced.
+
+## Phase 17 Verification
+
+Phase 17 adds deterministic, review-only field extraction on top of the PDF and
+DOCX text preview. Run the complete checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s reckon_copilot\tests -p "test_*.py"
+.\.venv\Scripts\python.exe -m compileall -q reckon_copilot
+node --test reckon_copilot/public/js/copilot/*.test.mjs
+node scripts/validate_vue.mjs
+```
+
+On a permitted invoice Form, attach a text-based invoice PDF or DOCX containing
+clear labels such as `Invoice Number`, `Invoice Date`, `Customer` and `Grand
+Total`. Confirm the panel shows the extracted value, source label and
+confidence, and that values are normalized where safe. Confirm fields that are
+not installed on the target DocType are omitted, the preview remains review
+only, and no `Prepare import plan` button appears for PDF/DOCX. Try a document
+with no labels and confirm it reports that nothing was extracted without a
+Frappe error modal. Confirm no ERP record, approval token or model-training
+record is created.

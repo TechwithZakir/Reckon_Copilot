@@ -8,6 +8,7 @@ from reckon_copilot.actions.approval import issue_approval_token
 from reckon_copilot.actions.executor import FrappeActionAuditStore
 from reckon_copilot.imports.mapping import build_import_plan
 from reckon_copilot.imports.executor import ImportExecutionError, execute_import_plan, record_import_approval
+from reckon_copilot.imports.extraction import build_field_extraction_preview
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
 from reckon_copilot.permissions.boundary import CopilotPermissionBoundary, FrappePermissionAdapter, PermissionDenied, authorize_context
 
@@ -48,6 +49,8 @@ def preview_document(
             mime_type=mime_type,
             target_fields=fields,
         )
+        if preview.get("structured") is False:
+            preview.update(build_field_extraction_preview(preview, target_fields=fields))
         preview["target_doctype"] = str(target_doctype or "").strip() or None
         preview["suggested_doctypes"] = _suggested_doctypes(frappe, file_name)
         return {"ok": True, "preview": preview}

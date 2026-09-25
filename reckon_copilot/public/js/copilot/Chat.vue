@@ -611,6 +611,19 @@ onBeforeUnmount(() => {
           <p v-if="message.importPreview.text_excerpt" class="rc-import-excerpt">
             {{ message.importPreview.text_excerpt }}
           </p>
+          <div v-if="message.importPreview.extracted_fields?.length" class="rc-import-extracted">
+            <strong>Extracted fields for review</strong>
+            <div v-for="field in message.importPreview.extracted_fields" :key="field.fieldname" class="rc-import-extracted-row">
+              <span>
+                <b>{{ field.label }}</b>
+                <small>{{ field.source }} · {{ field.confidence }} confidence</small>
+              </span>
+              <em>{{ field.value }}</em>
+            </div>
+          </div>
+          <ul v-if="message.importPreview.extraction_warnings?.length" class="rc-message-notes">
+            <li v-for="warning in message.importPreview.extraction_warnings" :key="warning">{{ warning }}</li>
+          </ul>
           <p v-if="message.importPreview.suggestedDoctypes?.length" class="rc-import-suggestion">
             Possible DocType: {{ message.importPreview.suggestedDoctypes.join(", ") }}
           </p>

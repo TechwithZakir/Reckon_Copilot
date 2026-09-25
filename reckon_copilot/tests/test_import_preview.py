@@ -8,6 +8,7 @@ import zlib
 
 from reckon_copilot.imports.preview import ImportPreviewError, build_document_preview
 from reckon_copilot.imports.mapping import build_import_plan
+from reckon_copilot.imports.extraction import build_field_extraction_preview
 
 
 class ImportPreviewTests(unittest.TestCase):
@@ -88,6 +89,37 @@ class ImportPreviewTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "structured import mapping"):
             build_import_plan(preview, "Sales Order", [{"fieldname": "customer", "fieldtype": "Data"}])
+
+    def test_labeled_invoice_values_map_only_to_installed_target_fields(self):
+        extraction = build_field_extraction_preview(
+            {
+                "text_excerpt": (
+                    "Invoice Number: INV-2026-0042 Invoice Date: 24-09-2026 "
+                    "Customer: Crystal Traders Grand Total: BDT 1,250.00 "
+                    "Unlabelled secret value"
+                )
+            },
+            target_fields={"bill_no", "posting_date", "customer", "grand_total", "company"},
+        )
+
+        values = {item["fieldname"]: item["value"] for item in extraction["extracted_fields"]}
+        self.assertEqual(values["bill_no"], "INV-2026-0042")
+        self.assertEqual(values["posting_date"], "2026-09-24")
+        self.assertEqual(values["customer"], "Crystal Traders")
+        self.assertEqual(values["grand_total"], "1250.00")
+        self.assertNotIn("secret", extraction["extracted_record"])
+        self.assertFalse(extraction["write_required"])
+        self.assertTrue(extraction["requires_approval"])
+        self.assertFalse(extraction["model_training"])
+
+    def test_extraction_reports_when_no_target_field_matches(self):
+        extraction = build_field_extraction_preview(
+            {"text_excerpt": "Invoice Number: INV-2026-0042"},
+            target_fields={"description"},
+        )
+
+        self.assertEqual(extraction["extracted_fields"], [])
+        self.assertTrue(any("selected DocType" in warning for warning in extraction["extraction_warnings"]))
 
     def test_empty_or_oversized_document_is_rejected(self):
         with self.assertRaises(ImportPreviewError):
