@@ -8,14 +8,20 @@ import ContextHeader from "./ContextHeader.vue";
 import NotificationCenter from "./NotificationCenter.vue";
 import Settings from "./Settings.vue";
 import SuggestedPrompts from "./SuggestedPrompts.vue";
-import { createShellState, reduceShellState } from "./shell_state.mjs";
+import {
+  createShellState,
+  persistPanelState,
+  readPersistedPanelState,
+  reduceShellState,
+} from "./shell_state.mjs";
 
 const props = defineProps({
   pageType: { type: String, default: "Page" },
   routeContext: { type: Object, default: null },
   contextAlert: { type: String, default: "" },
 });
-const state = ref(createShellState());
+const state = ref(createShellState({}, readPersistedPanelState()));
+const preferencesReady = ref(false);
 const prompts = ref([]);
 const selectedPrompt = ref("");
 const settingsOpen = ref(false);
@@ -245,6 +251,8 @@ async function loadConfiguration() {
   } catch (error) {
     prompts.value = ["What can I do here?", "Show available help"];
     dispatch({ type: "configuration-error", message: error.message });
+  } finally {
+    preferencesReady.value = true;
   }
 }
 
@@ -264,7 +272,7 @@ async function updatePreferences(preferences) {
 async function loadInsights() {
   showAllActions.value = false;
   showAllQuestions.value = false;
-  if (!props.routeContext || props.routeContext.access_denied) {
+  if (!state.value.preferences.enabled || !props.routeContext || props.routeContext.access_denied) {
     insights.value = [];
     notifications.value = [];
     advisorQuestions.value = [];
@@ -297,14 +305,20 @@ async function loadInsights() {
 
 onMounted(loadConfiguration);
 onMounted(loadInsights);
+watch(
+  () => [state.value.isOpen, state.value.isMinimized],
+  ([isOpen, isMinimized]) => persistPanelState({ isOpen, isMinimized }),
+  { immediate: true },
+);
 watch(() => props.pageType, loadConfiguration);
 watch(contextFingerprint, loadInsights);
+watch(() => state.value.preferences.enabled, loadInsights);
 watch(() => state.value.preferences.notifications_enabled, loadInsights);
 </script>
 
 <template>
   <button
-    v-if="!state.isOpen"
+    v-if="preferencesReady && state.preferences.enabled && !state.isOpen"
     class="rc-button rc-button-solid rc-launcher"
     type="button"
     @click="dispatch({ type: 'open' })"
@@ -313,14 +327,14 @@ watch(() => state.value.preferences.notifications_enabled, loadInsights);
   </button>
 
   <ContextHeader
-    v-if="state.isOpen && !state.isMinimized"
+    v-if="preferencesReady && state.preferences.enabled && state.isOpen && !state.isMinimized"
     :page-type="routeContext?.page_type || pageType"
     :detail="contextDetail"
     :fingerprint="contextFingerprint"
   />
 
   <aside
-    v-if="state.isOpen"
+    v-if="preferencesReady && state.preferences.enabled && state.isOpen"
     class="rc-panel"
     :class="{ 'is-minimized': state.isMinimized }"
     aria-label="Reckon Copilot"

@@ -4,10 +4,51 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   response_sound_enabled: false,
 });
 
-export function createShellState(preferences = {}) {
+export const PANEL_STATE_STORAGE_KEY = "reckon_copilot.panel_state.v1";
+
+function getStorage(storage) {
+  if (storage !== undefined) return storage;
+  try {
+    return globalThis.localStorage;
+  } catch (_error) {
+    return null;
+  }
+}
+
+export function readPersistedPanelState(storage) {
+  const target = getStorage(storage);
+  if (!target) return {};
+  try {
+    const value = JSON.parse(target.getItem(PANEL_STATE_STORAGE_KEY) || "{}");
+    return {
+      ...(typeof value?.isOpen === "boolean" ? { isOpen: value.isOpen } : {}),
+      ...(typeof value?.isMinimized === "boolean" ? { isMinimized: value.isMinimized } : {}),
+    };
+  } catch (_error) {
+    return {};
+  }
+}
+
+export function persistPanelState(state, storage) {
+  const target = getStorage(storage);
+  if (!target) return;
+  try {
+    target.setItem(
+      PANEL_STATE_STORAGE_KEY,
+      JSON.stringify({
+        isOpen: Boolean(state?.isOpen),
+        isMinimized: Boolean(state?.isMinimized),
+      }),
+    );
+  } catch (_error) {
+    // Private browsing and storage quotas must not prevent the shell opening.
+  }
+}
+
+export function createShellState(preferences = {}, panelState = readPersistedPanelState()) {
   return {
-    isOpen: true,
-    isMinimized: false,
+    isOpen: panelState.isOpen !== false,
+    isMinimized: panelState.isMinimized === true,
     status: "idle",
     error: "",
     preferences: { ...DEFAULT_PREFERENCES, ...preferences },

@@ -59,6 +59,7 @@
 
 .rc-panel-header {
   display: flex;
+  flex: 0 0 auto;
   min-height: 58px;
   align-items: center;
   justify-content: space-between;
@@ -1667,14 +1668,56 @@
 
 @media (max-width: 640px) {
   .rc-panel {
-    top: 48px;
+    top: 0;
     right: 0;
-    bottom: 0;
+    bottom: auto;
     width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
     border-radius: 0;
+  }
+
+  .rc-panel-header {
+    min-height: 56px;
+    padding: 9px 12px;
+    gap: 6px;
+  }
+
+  .rc-brand {
+    min-width: 0;
+    gap: 7px;
+  }
+
+  .rc-brand > div {
+    min-width: 0;
+  }
+
+  .rc-brand strong {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rc-header-actions {
+    gap: 1px;
+  }
+
+  .rc-icon-button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .rc-panel-body {
+    overscroll-behavior: contain;
+    padding: 12px 12px 10px;
+  }
+
+  .rc-panel-footer {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
   }
 
   .rc-metric-grid {
