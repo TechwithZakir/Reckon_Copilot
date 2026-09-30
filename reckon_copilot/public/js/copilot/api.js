@@ -58,7 +58,7 @@ export function getShellConfig(pageType) {
 }
 
 export function getRouteContext(route, filters = {}, pageType = "Page") {
-  return call("reckon_copilot.api.context.get_context", {
+  return callSilent("reckon_copilot.api.context.get_context", {
     route,
     filters,
     page_type: pageType,

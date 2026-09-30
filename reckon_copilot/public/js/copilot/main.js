@@ -14,6 +14,21 @@ function getRouteFilters() {
   );
 }
 
+function fallbackPageContext(route) {
+  const parts = Array.isArray(route) ? route : [];
+  return {
+    version: "v1",
+    source: "desk_route",
+    route: parts,
+    page_type: "Page",
+    page_name: parts.at(-1) || "Current page",
+    permission: {
+      mode: "generic_page_fallback",
+      enforcement: "phase_3",
+    },
+  };
+}
+
 export function mountCopilot() {
   if (document.getElementById(ROOT_ID) || !document.body) return;
 
@@ -36,6 +51,12 @@ export function mountCopilot() {
     try {
       const routeContext = await getRouteContext(route, getRouteFilters(), context.pageType);
       if (currentRequest === requestId) {
+        if (routeContext?.permission?.context_fallback === "missing_doctype") {
+          console.info(
+            "[Reckon Copilot] Structured context skipped because the route is not a DocType page.",
+            { route, page: routeContext.page_name },
+          );
+        }
         context.routeContext = routeContext;
         context.pageType = routeContext.page_type || context.pageType;
         context.contextAlert = routeContext.access_denied
@@ -45,9 +66,13 @@ export function mountCopilot() {
       }
     } catch (error) {
       if (currentRequest === requestId) {
-        context.routeContext = null;
-        context.contextAlert =
-          error?.message || "Copilot could not sync this page context. Please try again.";
+        context.routeContext = fallbackPageContext(route);
+        context.pageType = "Page";
+        context.contextAlert = "";
+        console.warn(
+          "[Reckon Copilot] Page context was unavailable; using generic page context.",
+          { route, error },
+        );
       }
     }
   }

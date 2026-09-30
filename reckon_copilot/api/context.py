@@ -76,6 +76,26 @@ def _canonicalize_with_frappe(context: dict[str, Any]) -> dict[str, Any]:
         resolve_workspace=resolve_workspace,
         doctype_exists=doctype_exists,
     )
+    # Desk pages can use a single slug that looks like a list route while not
+    # being backed by a DocType at all. Keep those pages available to Copilot
+    # as generic page context instead of asking Frappe to authorize a missing
+    # DocType and showing a global error modal.
+    if canonical.get("page_type") in {"List", "Form"}:
+        doctype = str(canonical.get("doctype") or "").strip()
+        if doctype and not doctype_exists(doctype):
+            fallback = dict(canonical)
+            fallback["page_type"] = "Page"
+            fallback["page_name"] = doctype
+            fallback["permission"] = {
+                **dict(fallback.get("permission") or {}),
+                "context_fallback": "missing_doctype",
+                "route_hint": doctype,
+            }
+            fallback.pop("doctype", None)
+            fallback.pop("document_name", None)
+            fallback.pop("view", None)
+            fallback["fingerprint"] = fingerprint_context(fallback)
+            return fallback
     return promote_workspace_slug_to_doctype(
         canonical,
         workspace_exists=workspace_exists,

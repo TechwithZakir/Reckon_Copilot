@@ -35,6 +35,21 @@ class ContextApiTests(unittest.TestCase):
         self.assertEqual(canonical["page_type"], "Workspace")
         self.assertEqual(canonical["workspace_name"], "Reckon Copilot")
 
+    def test_missing_list_doctype_falls_back_to_generic_page_context(self):
+        fake_frappe = _FakeFrappe(workspaces=set())
+        context = build_context(
+            route=["List", "Project Dashboard", "List"],
+            page_type="List",
+        )
+
+        with patch.dict(sys.modules, {"frappe": fake_frappe}):
+            canonical = _canonicalize_with_frappe(context)
+
+        self.assertEqual(canonical["page_type"], "Page")
+        self.assertEqual(canonical["page_name"], "Project Dashboard")
+        self.assertNotIn("doctype", canonical)
+        self.assertEqual(canonical["permission"]["context_fallback"], "missing_doctype")
+
     def test_permission_denied_returns_panel_alert_payload(self):
         with patch(
             "reckon_copilot.api.context.authorize_context",
