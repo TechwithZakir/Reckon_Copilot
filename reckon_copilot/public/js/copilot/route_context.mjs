@@ -47,20 +47,17 @@ function visibleListViewName() {
 
 function looksLikeDeskListPage(slug) {
   if (!slug) return false;
-  if (document.querySelector(".layout-main-section .result, .list-row-container, .frappe-list")) {
-    return true;
-  }
-  if (document.querySelector(".page-actions .primary-action, .standard-actions .primary-action")) {
-    return true;
-  }
-  const title = pageTitle();
-  return Boolean(title && slugify(title) === slug);
+  return Boolean(
+    document.querySelector(
+      ".layout-main-section .result, .list-row-container, .frappe-list, .list-view-container"
+    )
+  );
 }
 
 function looksLikeWorkspacePage() {
   return Boolean(
     document.querySelector(
-      ".workspace, .codex-editor, .widget-group, .workspace-sidebar, .dashboard-container, .number-card"
+      ".workspace, .codex-editor, .widget-group, .workspace-sidebar, .list-sidebar, .dashboard-container, .number-card"
     )
   );
 }
@@ -135,7 +132,10 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
     return ["Workspace", titleCaseSlug(slug)];
   }
   if (slug) {
-    return ["Workspace", titleCaseSlug(slug)];
+    // A one-segment route without a native list, form, report, dashboard or
+    // workspace signal is an opaque Desk page. Never guess a DocType from its
+    // title; the server will keep this generic context permission-safe.
+    return ["Page", pageTitle() || titleCaseSlug(slug)];
   }
   return rawRoute;
 }

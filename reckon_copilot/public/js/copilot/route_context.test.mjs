@@ -92,15 +92,28 @@ test("workspace dom wins over a stale list global", () => {
   assert.equal(getPageType(route), "Workspace");
 });
 
-test("one-part doctype route falls back to visible title before cur_list is ready", () => {
+test("one-part doctype route uses native list evidence before cur_list is ready", () => {
   setDeskPath("/desk/customer-group");
   global.document.selectors.set(".page-title .title-text", textNode("Customer Group"));
-  global.document.selectors.set(".page-actions .primary-action, .standard-actions .primary-action", {});
+  global.document.selectors.set(
+    ".layout-main-section .result, .list-row-container, .frappe-list, .list-view-container",
+    {},
+  );
 
   const route = getCanonicalRoute(["customer-group"]);
 
   assert.deepEqual(route, ["List", "Customer Group", "List"]);
   assert.equal(getPageType(route), "List");
+});
+
+test("unknown one-part desk route stays generic instead of becoming a guessed workspace", () => {
+  setDeskPath("/desk/custom-operational-page");
+  global.document.selectors.set(".page-title .title-text", textNode("Custom Operational Page"));
+
+  const route = getCanonicalRoute(["custom-operational-page"]);
+
+  assert.deepEqual(route, ["Page", "Custom Operational Page"]);
+  assert.equal(getPageType(route), "Page");
 });
 
 test("query-report route beats stale form state", () => {
