@@ -1,16 +1,7 @@
 export function call(method, args = {}) {
-  if (!window.frappe?.call) {
-    return Promise.reject(new Error("Frappe API is unavailable"));
-  }
-
-  return new Promise((resolve, reject) => {
-    window.frappe.call({
-      method,
-      args,
-      callback: (response) => resolve(response.message),
-      error: (error) => reject(normalizeFrappeError(error)),
-    });
-  });
+  // Copilot requests must not use frappe.call: its global error handler opens
+  // a modal before the panel can decide whether an error is actionable.
+  return callSilent(method, args);
 }
 
 function normalizeFrappeError(error) {
@@ -54,7 +45,7 @@ function isMissingMethodError(error) {
 }
 
 export function getShellConfig(pageType) {
-  return call("reckon_copilot.api.shell.get_shell_config", { page_type: pageType });
+  return callSilent("reckon_copilot.api.shell.get_shell_config", { page_type: pageType });
 }
 
 export function getRouteContext(route, filters = {}, pageType = "Page") {
@@ -66,14 +57,14 @@ export function getRouteContext(route, filters = {}, pageType = "Page") {
 }
 
 export function getInsights(context, evidence = []) {
-  return call("reckon_copilot.api.insights.get_insights", {
+  return callSilent("reckon_copilot.api.insights.get_insights", {
     context,
     evidence,
   });
 }
 
 export function getNotifications(context, evidence = [], enabled = true) {
-  return call("reckon_copilot.api.notifications.get_notifications", {
+  return callSilent("reckon_copilot.api.notifications.get_notifications", {
     context,
     evidence,
     enabled,
@@ -81,11 +72,11 @@ export function getNotifications(context, evidence = [], enabled = true) {
 }
 
 export function getAgentAdvice(context) {
-  return call("reckon_copilot.api.advisor.get_agent_advice", { context });
+  return callSilent("reckon_copilot.api.advisor.get_agent_advice", { context });
 }
 
 export function recordSuggestionFeedback(templateId, outcome, context, catalogVersion = "1") {
-  return call("reckon_copilot.api.catalog_learning.record_suggestion_feedback", {
+  return callSilent("reckon_copilot.api.catalog_learning.record_suggestion_feedback", {
     template_id: templateId,
     outcome,
     context,
@@ -94,15 +85,15 @@ export function recordSuggestionFeedback(templateId, outcome, context, catalogVe
 }
 
 export function runAnalytics(question, context) {
-  return call("reckon_copilot.api.analytics.run", { question, context });
+  return callSilent("reckon_copilot.api.analytics.run", { question, context });
 }
 
 export function runForecasting(question, context, mode = "forecast") {
-  return call("reckon_copilot.api.forecasting.run", { question, context, mode });
+  return callSilent("reckon_copilot.api.forecasting.run", { question, context, mode });
 }
 
 export function previewAction(context, action, values = {}) {
-  return call("reckon_copilot.api.actions.preview_action", {
+  return callSilent("reckon_copilot.api.actions.preview_action", {
     context,
     action,
     values,
@@ -110,11 +101,11 @@ export function previewAction(context, action, values = {}) {
 }
 
 export function confirmAction(plan) {
-  return call("reckon_copilot.api.actions.approve_preview", { plan });
+  return callSilent("reckon_copilot.api.actions.approve_preview", { plan });
 }
 
 export function previewDocumentImport(fileName, content, mimeType, context, targetDoctype = "") {
-  return call("reckon_copilot.api.imports.preview_document", {
+  return callSilent("reckon_copilot.api.imports.preview_document", {
     file_name: fileName,
     content,
     mime_type: mimeType,
@@ -124,7 +115,7 @@ export function previewDocumentImport(fileName, content, mimeType, context, targ
 }
 
 export function prepareDocumentImportPlan(fileName, content, mimeType, context, targetDoctype, fieldMap = {}) {
-  return call("reckon_copilot.api.imports.prepare_document_import_plan", {
+  return callSilent("reckon_copilot.api.imports.prepare_document_import_plan", {
     file_name: fileName,
     content,
     mime_type: mimeType,
@@ -135,7 +126,7 @@ export function prepareDocumentImportPlan(fileName, content, mimeType, context, 
 }
 
 export function prepareExtractedDocumentImportPlan(fileName, content, mimeType, context, targetDoctype, reviewedRecord = {}) {
-  return call("reckon_copilot.api.imports.prepare_extracted_document_import_plan", {
+  return callSilent("reckon_copilot.api.imports.prepare_extracted_document_import_plan", {
     file_name: fileName,
     content,
     mime_type: mimeType,
@@ -146,11 +137,11 @@ export function prepareExtractedDocumentImportPlan(fileName, content, mimeType, 
 }
 
 export function approveDocumentImportPlan(plan) {
-  return call("reckon_copilot.api.imports.approve_document_import_plan", { plan });
+  return callSilent("reckon_copilot.api.imports.approve_document_import_plan", { plan });
 }
 
 export function executeDocumentImport(plan, approvalToken, fileName, content, mimeType) {
-  return call("reckon_copilot.api.imports.execute_document_import", {
+  return callSilent("reckon_copilot.api.imports.execute_document_import", {
     plan,
     approval_token: approvalToken,
     file_name: fileName,
@@ -160,11 +151,11 @@ export function executeDocumentImport(plan, approvalToken, fileName, content, mi
 }
 
 export function savePreferences(preferences) {
-  return call("reckon_copilot.api.preferences.update_preferences", preferences);
+  return callSilent("reckon_copilot.api.preferences.update_preferences", preferences);
 }
 
 export function askCopilot(question, context, evidence = [], selectedModel = "") {
-  return call("reckon_copilot.api.ask.ask", {
+  return callSilent("reckon_copilot.api.ask.ask", {
     question,
     context,
     evidence,

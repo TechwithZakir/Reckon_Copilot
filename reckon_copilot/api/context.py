@@ -83,19 +83,7 @@ def _canonicalize_with_frappe(context: dict[str, Any]) -> dict[str, Any]:
     if canonical.get("page_type") in {"List", "Form"}:
         doctype = str(canonical.get("doctype") or "").strip()
         if doctype and not doctype_exists(doctype):
-            fallback = dict(canonical)
-            fallback["page_type"] = "Page"
-            fallback["page_name"] = doctype
-            fallback["permission"] = {
-                **dict(fallback.get("permission") or {}),
-                "context_fallback": "missing_doctype",
-                "route_hint": doctype,
-            }
-            fallback.pop("doctype", None)
-            fallback.pop("document_name", None)
-            fallback.pop("view", None)
-            fallback["fingerprint"] = fingerprint_context(fallback)
-            return fallback
+            return _fallback_page_context(canonical, reason="missing_doctype", label=doctype)
     return promote_workspace_slug_to_doctype(
         canonical,
         workspace_exists=workspace_exists,
@@ -120,6 +108,10 @@ def get_context(
     try:
         authorized = authorize_context(context)
     except Exception as error:
+        if _is_missing_doctype(error):
+            fallback = _fallback_page_context(context, reason="missing_doctype")
+            _log_context_fallback(fallback, error)
+            return fallback
         if not _is_permission_denial(error):
             raise
         context["access_denied"] = True
@@ -157,3 +149,55 @@ def _is_permission_denial(error: Exception) -> bool:
         "PermissionDenied",
         "PermissionError",
     }
+
+
+def _is_missing_doctype(error: Exception) -> bool:
+    message = str(error or "")
+    return error.__class__.__name__ in {"DoesNotExistError", "DocTypeNotFoundError"} or bool(
+        re.search(r"doctype .* (?:not found|does not exist)", message, re.IGNORECASE)
+    )
+
+
+def _fallback_page_context(
+    context: dict[str, Any],
+    *,
+    reason: str,
+    label: str | None = None,
+) -> dict[str, Any]:
+    fallback = dict(context)
+    page_label = label or (
+        context.get("doctype")
+        or context.get("report_name")
+        or context.get("dashboard_name")
+        or context.get("workspace_name")
+        or context.get("page_name")
+        or (context.get("route") or ["Current page"])[-1]
+        or "Current page"
+    )
+    fallback["page_type"] = "Page"
+    fallback["page_name"] = str(page_label)
+    fallback["permission"] = {
+        **dict(fallback.get("permission") or {}),
+        "mode": "generic_page_fallback",
+        "context_fallback": reason,
+        "route_hint": str(page_label),
+    }
+    for key in ("doctype", "document_name", "view", "report_name", "dashboard_name", "workspace_name"):
+        fallback.pop(key, None)
+    fallback["fingerprint"] = fingerprint_context(fallback)
+    return fallback
+
+
+def _log_context_fallback(context: dict[str, Any], error: Exception) -> None:
+    try:
+        import frappe  # type: ignore
+
+        logger = frappe.logger("reckon_copilot")
+        logger.warning(
+            "Ignored missing DocType while building Copilot page context: %s (%s)",
+            context.get("page_name"),
+            error,
+        )
+    except Exception:
+        # Logging must never turn a harmless unsupported page into a request error.
+        return

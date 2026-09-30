@@ -80,6 +80,25 @@ class ContextApiTests(unittest.TestCase):
         self.assertEqual(context["report_name"], "Item-wise Sales Register")
         self.assertEqual(context["permission"]["reason"], "No access to requested report")
 
+    def test_missing_doctype_from_permission_boundary_becomes_generic_page(self):
+        class DoesNotExistError(Exception):
+            pass
+
+        with patch(
+            "reckon_copilot.api.context.authorize_context",
+            side_effect=DoesNotExistError("DocType Project Dashboard not found"),
+        ):
+            context = get_context(
+                route=["List", "Project Dashboard", "List"],
+                filters={},
+                page_type="List",
+            )
+
+        self.assertEqual(context["page_type"], "Page")
+        self.assertEqual(context["page_name"], "Project Dashboard")
+        self.assertEqual(context["permission"]["context_fallback"], "missing_doctype")
+        self.assertNotIn("doctype", context)
+
 class _FakeDB:
     def __init__(self, workspaces):
         self.workspaces = set(workspaces)

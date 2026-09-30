@@ -65,6 +65,14 @@ function looksLikeWorkspacePage() {
   );
 }
 
+function looksLikeCustomDeskPage(slug) {
+  if (!slug) return false;
+  // Custom Desk pages expose a stable page-{route} container but do not have
+  // a DocType-backed list controller. Check this before title-based list
+  // inference so pages such as /desk/project-dashboard stay generic.
+  return Boolean(document.querySelector(`#page-${slug}, .page-${slug}`));
+}
+
 export function getCanonicalRoute(rawRoute = getRoute()) {
   const deskParts = getDeskParts();
   const slug = deskParts[0] || "";
@@ -100,6 +108,10 @@ export function getCanonicalRoute(rawRoute = getRoute()) {
   // loading. Prefer the workspace route before consulting stale list globals.
   if (deskParts.length === 1 && looksLikeWorkspacePage()) {
     return ["Workspace", titleCaseSlug(slug)];
+  }
+
+  if (deskParts.length === 1 && looksLikeCustomDeskPage(slug)) {
+    return ["Page", pageTitle() || titleCaseSlug(slug)];
   }
 
   if (window.cur_list?.doctype && slugify(window.cur_list.doctype) === slug) {

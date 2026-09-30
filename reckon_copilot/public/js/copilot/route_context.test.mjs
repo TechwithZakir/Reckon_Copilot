@@ -54,6 +54,20 @@ test("module workspace route is not promoted to list by list-like dom", () => {
   assert.equal(getPageType(route), "Workspace");
 });
 
+test("custom desk page is not promoted to a missing DocType list", () => {
+  setDeskPath("/desk/project-dashboard");
+  global.document.querySelector = (selector) => {
+    if (selector.includes(".page-project-dashboard")) return {};
+    if (selector.includes(".page-title .title-text")) return textNode("Project Dashboard");
+    return null;
+  };
+
+  const route = getCanonicalRoute(["project-dashboard"]);
+
+  assert.deepEqual(route, ["Page", "Project Dashboard"]);
+  assert.equal(getPageType(route), "Page");
+});
+
 test("private workspace route uses the workspace slug", () => {
   setDeskPath("/desk/private/reckon-copilot");
 
