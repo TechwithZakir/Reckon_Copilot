@@ -586,3 +586,90 @@ blocker even though Copilot safely falls back to the normal request path.
 Future work is optional and should be opened as a new phase only when a
 business requirement is agreed, such as persistent alert dismissal, OCR or
 large-file migration. None is required to finish the current planned scope.
+
+## MCP reference alignment and continuous enhancement roadmap
+
+The next optional milestone is a first-party MCP interface for Reckon Copilot.
+This does not reopen Phases 0–19 and does not make either external repository a
+dependency.
+
+### Reference-only inputs
+
+[`frappe/frappectl`](https://github.com/frappe/frappectl) is a reference for
+Frappe REST v2 discovery, compact JSON contracts, read-only profiles and
+caller-owned confirmation. [`sanjay-kumar001/ai_chatbot`](https://github.com/sanjay-kumar001/ai_chatbot)
+is a reference for permission-filtered tool
+registries, relevant-tool routing, Frappe realtime progress, structured
+results, document extraction and feedback workflows.
+
+The native implementation must not import `ai_chatbot`, invoke `frappectl` per
+request or copy its broad CRUD/provider surface. It will reimplement only the
+useful patterns behind existing Reckon Copilot services. Any reused MIT code
+must retain its license and attribution.
+
+### Design rules for the MCP work
+
+- The MCP adapter calls the existing canonical context resolver, permission
+  boundary, knowledge service, provider manager, cache manager, advisor,
+  action planner and import services. It must not introduce parallel access
+  checks or unrestricted SQL/raw REST tools.
+- Read resources and tools stay bounded: current page context, DocType
+  metadata, safe document summaries, list/report/dashboard/workspace snapshots,
+  approved knowledge and advisor recommendations. Raw page HTML and full
+  unbounded documents are never MCP context.
+- The default path remains deterministic plus a small local LLM. A larger or
+  remote model is selected explicitly. Only tools relevant to the current
+  page, capability and question are exposed to reduce prompt tokens.
+- MCP arguments/results use compact schemas, bounded rows/aggregates and
+  evidence references. Tool rounds are capped, repeated calls are detected,
+  stale work can be canceled and provider/realtime failure returns a readable
+  fallback.
+- MCP cache identities reuse the Phase 5 scope: site, permission scope, user
+  where required, canonical context fingerprint, capability, arguments or
+  question, provider/model and prompt/data versions. Results are never shared
+  across incompatible scopes; single-flight and versioned invalidation are
+  required; cache failure must not block Desk use.
+- Realtime token/progress events remain the existing Frappe channel. MCP tools
+  return structured, auditable results rather than adding a second streaming
+  protocol.
+- Every write remains `preview -> explicit current-user confirmation -> native
+  permission recheck -> execute -> audit`. MCP cannot silently create, update,
+  delete, submit, approve or import. There is no separate Administrator
+  approval queue, encryption-key requirement or automatic model training.
+- Feedback can produce validated candidate prompt/catalog improvements, but
+  publication requires administrator review, versioning and rollback. This is
+  governed prompt improvement, not model-weight training.
+
+### Post-19 MCP phases
+
+1. **MCP-A contract and inventory**: define resource/tool/prompt schemas,
+   capability mapping and native service owners; keep the first contract
+   read-only.
+2. **MCP-B bounded read server**: build a first-party registry and expose
+   permission-scoped context, metadata, list/report/dashboard/knowledge and
+   advisor operations with compact structured errors.
+3. **MCP-C local agent bridge**: add dynamic relevant-tool selection, capped
+   rounds, loop protection, progress stages and deterministic/local-small-LLM
+   fallback behavior.
+4. **MCP-D cache and reuse**: add scope-safe MCP result caching, single-flight,
+   versioning, invalidation and token/latency measurements.
+5. **MCP-E contextual prompts**: expose relevant page-specific prompts for
+   Form, List, Report, Dashboard, Workspace and Homepage using current date,
+   company scope and compact signals.
+6. **MCP-F confirmed actions/imports**: expose previews and
+   execute-after-confirmation only, reusing native permissions, plan hashes,
+   idempotency and action audit records.
+7. **MCP-G external interoperability**: add optional Streamable HTTP for
+   trusted clients, with stdio/Inspector for development and explicit auth,
+   host, quota and tool exposure controls. SSE is compatibility-only.
+8. **MCP-H governed enhancement**: aggregate feedback, generate and validate
+   candidate catalog/prompt changes, require administrator publication review,
+   version snapshots and retain rollback.
+9. **MCP-I release verification**: cover MCP Inspector/client interoperability,
+   restricted users, empty or missing contexts, cache isolation, stale plans,
+   cancellation, realtime fallback and load limits.
+
+The roadmap is deliberately compatible with the current local-first, low-token
+architecture. The first implementation should be a small read-only contract
+and test suite; action exposure and external transport are later gates, not
+prerequisites for the native Copilot experience.
