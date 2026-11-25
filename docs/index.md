@@ -8,6 +8,8 @@ lang: en
 
 # Reckon Copilot: an AI assistant inside the ERP
 
+![Banner](banner.svg)
+
 Reckon Copilot is an AI assistant that lives inside the ERP Desk. It understands the page a user is on, answers from what that user is allowed to see, surfaces insights and alerts, and can prepare ERP actions that the user reviews and approves. It is part of the AI direction of [ReckonERP](https://app.reckon.tech).
 
 ## Detailed features
